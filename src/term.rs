@@ -57,6 +57,14 @@ pub enum TermInner {
     Op(OpTerm),
 }
 
+impl TermInner {
+    #[inline]
+    pub fn var_term(&self) -> &VarTerm {
+        let TermInner::Var(vt) = self else { panic!() };
+        vt
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BvConst {
     pub(crate) c: Vec<bool>,
@@ -82,25 +90,25 @@ pub enum ConstTerm {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct VarTerm {
-    vid: u32,
-    sort: Sort,
+    pub id: u32,
+    pub sort: Sort,
 }
 
 impl VarTerm {
-    pub fn new(vid: u32, sort: Sort) -> Self {
-        Self { vid, sort }
+    pub fn new(id: u32, sort: Sort) -> Self {
+        Self { id, sort }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct OpTerm {
-    op: DynOp,
-    terms: Vec<Term>,
+    pub op: DynOp,
+    pub terms: Vec<Term>,
 }
 
 impl OpTerm {
     #[inline]
-    fn new(op: impl Into<DynOp>, terms: &[Term]) -> Self {
+    fn new(op: impl Into<DynOp>, terms: Vec<Term>) -> Self {
         Self {
             op: op.into(),
             terms: terms.to_vec(),
@@ -129,6 +137,11 @@ pub struct TermManager {
 
 impl TermManager {
     #[inline]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    #[inline]
     pub fn new_term(&mut self, inner: TermInner) -> Term {
         match self.map.get(&inner) {
             Some(term) => term.clone(),
@@ -151,15 +164,32 @@ impl TermManager {
         self.new_term(term)
     }
 
+    #[inline]
     pub fn bv_const(&mut self, c: &[bool]) -> Term {
         let term = TermInner::Const(ConstTerm::BV(BvConst::new(c)));
         self.new_term(term)
     }
 
     #[inline]
-    pub fn new_op_term(&mut self, op: impl Into<DynOp>, terms: &[Term]) -> Term {
+    pub fn new_op_term<'a>(
+        &mut self,
+        op: impl Into<DynOp>,
+        terms: impl IntoIterator<Item = &'a Term>,
+    ) -> Term {
+        let terms: Vec<Term> = terms.into_iter().map(|t| (*t).clone()).collect();
         let term = TermInner::Op(OpTerm::new(op, terms));
         self.new_term(term)
+    }
+
+    #[inline]
+    pub fn new_op_terms_fold<'a>(
+        &mut self,
+        op: impl Into<DynOp> + Copy,
+        terms: impl IntoIterator<Item = &'a Term>,
+    ) -> Term {
+        let mut terms = terms.into_iter();
+        let acc = terms.next().unwrap().clone();
+        terms.fold(acc, |acc, x| self.new_op_term(op, &[acc, x.clone()]))
     }
 
     #[inline]

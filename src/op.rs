@@ -29,6 +29,7 @@ pub trait Op: Debug + 'static {
         todo!()
     }
 
+    #[inline]
     fn bitblast(&self, _tm: &mut TermManager, _terms: &[Vec<Term>]) -> Vec<Term> {
         todo!()
     }
@@ -115,21 +116,37 @@ define_op!(Inc, 1, todo_bitblast);
 
 fn neq_bitblast(tm: &mut TermManager, terms: &[Vec<Term>]) -> Vec<Term> {
     let mut neqs = Vec::new();
-    for i in 0..terms[0].len() {
-        neqs.push(tm.new_op_term(Neq, &[terms[0][i].clone(), terms[1][i].clone()]))
+    for (x, y) in terms[0].iter().zip(terms[1].iter()) {
+        neqs.push(tm.new_op_term(Neq, [x, y]))
     }
-    let res = neqs[1..]
-        .iter()
-        .cloned()
-        .fold(neqs[0].clone(), |acc, neq| tm.new_op_term(Or, &[acc, neq]));
-    vec![res]
+    vec![tm.new_op_terms_fold(Or, &neqs)]
 }
-
 define_op!(Neq, 2, neq_bitblast);
+
 define_op!(Or, 2, todo_bitblast);
 define_op!(And, 2, todo_bitblast);
-define_op!(Uext, 2, todo_bitblast);
-define_op!(Add, 2, todo_bitblast);
+
+fn uext_bitblast(_tm: &mut TermManager, terms: &[Vec<Term>]) -> Vec<Term> {
+    let mut res = terms[0].clone();
+    res.extend_from_slice(&terms[1]);
+    res
+}
+define_op!(Uext, 2, uext_bitblast);
+
+fn add_bitblast(tm: &mut TermManager, terms: &[Vec<Term>]) -> Vec<Term> {
+    let mut c = tm.bool_const(false);
+    let mut res = Vec::new();
+    for (x, y) in terms[0].iter().zip(terms[1].iter()) {
+        res.push(tm.new_op_terms_fold(Xor, [x, y, &c]));
+        let xy = tm.new_op_term(And, [x, y]);
+        let xc = tm.new_op_term(And, [y, &c]);
+        let yc = tm.new_op_term(And, [x, &c]);
+        c = tm.new_op_terms_fold(Or, [&xy, &xc, &yc]);
+    }
+    res
+}
+define_op!(Add, 2, add_bitblast);
+define_op!(Xor, 2, add_bitblast);
 define_op!(Ite, 3, todo_bitblast);
 
 macro_rules! insert_op {
@@ -147,7 +164,7 @@ macro_rules! insert_op {
 lazy_static! {
     static ref OP_MAP: HashMap<String, DynOp> = {
         let mut m = HashMap::new();
-        insert_op!(m, Not, Inc, Or, Neq, And, Uext, Add, Ite);
+        insert_op!(m, Not, Inc, Or, Neq, And, Uext, Add, Ite, Xor);
         m
     };
 }
@@ -162,8 +179,6 @@ impl From<&str> for DynOp {
 // #[derive(Debug, Copy, Clone, strum::EnumString, strum::Display, PartialEq, Eq, Hash)]
 // #[strum(serialize_all = "lowercase")]
 // pub enum UniOpType {
-//     Not,
-//     Inc,
 //     Dec,
 //     Neg,
 //     Redand,
@@ -191,7 +206,6 @@ impl From<&str> for DynOp {
 //     Nor,
 //     Or,
 //     Xnor,
-//     Xor,
 //     Rol,
 //     Ror,
 //     Sll,

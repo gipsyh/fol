@@ -1,12 +1,17 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Sort {
-    Bv(u32),
-    Array(u32, u32),
+    Bv(usize),
+    Array(usize, usize),
 }
 
 impl Sort {
     #[inline]
-    pub fn bv_len(&self) -> u32 {
+    pub fn bool_sort() -> Self {
+        Sort::Bv(1)
+    }
+
+    #[inline]
+    pub fn bv_len(&self) -> usize {
         if let Sort::Bv(w) = self { *w } else { panic!() }
     }
 }
