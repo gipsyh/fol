@@ -1,36 +1,14 @@
 use super::{op::DynOp, sort::Sort};
-use crate::manager::gtm_new_term;
 use giputils::grc::Grc;
+use std::collections::HashMap;
+use std::fmt::{self, Debug};
+use std::hash;
 use std::{hash::Hash, ops::Deref};
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone)]
 pub struct Term {
+    tgc: TermGC,
     pub(crate) inner: Grc<TermInner>,
-}
-
-impl Term {
-    #[inline]
-    pub fn bool_const(c: bool) -> Self {
-        let term = TermInner::Const(ConstTerm::BV(BvConst::new(&[c])));
-        gtm_new_term(term)
-    }
-
-    pub fn bv_const(c: &[bool]) -> Self {
-        let term = TermInner::Const(ConstTerm::BV(BvConst::new(c)));
-        gtm_new_term(term)
-    }
-
-    #[inline]
-    pub fn new_op_term(op: impl Into<DynOp>, terms: &[Term]) -> Self {
-        let term = TermInner::Op(OpTerm::new(op, terms));
-        gtm_new_term(term)
-    }
-
-    #[inline]
-    pub fn new_var(sort: Sort, id: u32) -> Self {
-        let term = TermInner::Var(VarTerm::new(id, sort));
-        gtm_new_term(term)
-    }
 }
 
 impl Deref for Term {
@@ -39,6 +17,36 @@ impl Deref for Term {
     #[inline]
     fn deref(&self) -> &Self::Target {
         &self.inner
+    }
+}
+
+impl Hash for Term {
+    #[inline]
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.inner.hash(state);
+    }
+}
+
+impl Debug for Term {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Term").field("inner", &self.inner).finish()
+    }
+}
+
+impl PartialEq for Term {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        debug_assert!(self.tgc == other.tgc);
+        self.inner == other.inner
+    }
+}
+
+impl Eq for Term {}
+
+impl Drop for Term {
+    fn drop(&mut self) {
+        self.tgc.collect(self.clone());
     }
 }
 
@@ -97,6 +105,69 @@ impl OpTerm {
             op: op.into(),
             terms: terms.to_vec(),
         }
+    }
+}
+
+#[derive(Clone, Default, PartialEq, Eq, Debug)]
+pub struct TermGC {
+    garbage: Grc<Vec<Term>>,
+}
+
+impl TermGC {
+    #[inline]
+    pub fn collect(&mut self, term: Term) {
+        self.garbage.push(term);
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct TermManager {
+    tgc: TermGC,
+    num_var: u32,
+    map: HashMap<TermInner, Term>,
+}
+
+impl TermManager {
+    #[inline]
+    pub fn new_term(&mut self, inner: TermInner) -> Term {
+        match self.map.get(&inner) {
+            Some(term) => term.clone(),
+            None => {
+                let term = Term {
+                    tgc: self.tgc.clone(),
+                    inner: Grc::new(inner.clone()),
+                };
+                self.map.insert(inner, term.clone());
+                term
+            }
+        }
+    }
+
+    pub fn garbage_collect(&mut self) {}
+
+    #[inline]
+    pub fn bool_const(&mut self, c: bool) -> Term {
+        let term = TermInner::Const(ConstTerm::BV(BvConst::new(&[c])));
+        self.new_term(term)
+    }
+
+    pub fn bv_const(&mut self, c: &[bool]) -> Term {
+        let term = TermInner::Const(ConstTerm::BV(BvConst::new(c)));
+        self.new_term(term)
+    }
+
+    #[inline]
+    pub fn new_op_term(&mut self, op: impl Into<DynOp>, terms: &[Term]) -> Term {
+        let term = TermInner::Op(OpTerm::new(op, terms));
+        self.new_term(term)
+    }
+
+    #[inline]
+    pub fn new_var(&mut self, sort: Sort) -> Term {
+        let id = self.num_var;
+        self.num_var += 1;
+        let term = TermInner::Var(VarTerm::new(id, sort));
+        self.new_term(term)
     }
 }
 

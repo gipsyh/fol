@@ -1,4 +1,5 @@
 use super::term::Term;
+use crate::TermManager;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::{
@@ -24,11 +25,11 @@ pub trait Op: Debug + 'static {
     fn num_operand(&self) -> usize;
 
     #[inline]
-    fn op(&self, _terms: &[Term]) -> Term {
+    fn op(&self, _tm: &mut TermManager, _terms: &[Term]) -> Term {
         todo!()
     }
 
-    fn bitblast(&self, _terms: &[Vec<Term>]) -> Vec<Term> {
+    fn bitblast(&self, _tm: &mut TermManager, _terms: &[Vec<Term>]) -> Vec<Term> {
         todo!()
     }
 }
@@ -98,31 +99,29 @@ macro_rules! define_op {
             }
 
             #[inline]
-            fn bitblast(&self, terms: &[Vec<Term>]) -> Vec<Term> {
-                $bitblast(terms)
+            fn bitblast(&self, tm: &mut TermManager, terms: &[Vec<Term>]) -> Vec<Term> {
+                $bitblast(tm, terms)
             }
         }
     };
 }
 
-fn todo_bitblast(_terms: &[Vec<Term>]) -> Vec<Term> {
+fn todo_bitblast(_tm: &mut TermManager, _terms: &[Vec<Term>]) -> Vec<Term> {
     todo!()
 }
 
 define_op!(Not, 1, todo_bitblast);
 define_op!(Inc, 1, todo_bitblast);
 
-fn neq_bitblast(terms: &[Vec<Term>]) -> Vec<Term> {
+fn neq_bitblast(tm: &mut TermManager, terms: &[Vec<Term>]) -> Vec<Term> {
     let mut neqs = Vec::new();
     for i in 0..terms[0].len() {
-        neqs.push(Term::new_op_term(Neq, &[
-            terms[0][i].clone(),
-            terms[1][i].clone(),
-        ]))
+        neqs.push(tm.new_op_term(Neq, &[terms[0][i].clone(), terms[1][i].clone()]))
     }
-    let res = neqs[1..].iter().cloned().fold(neqs[0].clone(), |acc, neq| {
-        Term::new_op_term(Or, &[acc, neq])
-    });
+    let res = neqs[1..]
+        .iter()
+        .cloned()
+        .fold(neqs[0].clone(), |acc, neq| tm.new_op_term(Or, &[acc, neq]));
     vec![res]
 }
 

@@ -7,11 +7,6 @@ pub enum Sort {
 impl Sort {
     #[inline]
     pub fn bv_len(&self) -> u32 {
-        if let Sort::Bv(w) = self {
-            *w
-        } else {
-            panic!()
-        }
+        if let Sort::Bv(w) = self { *w } else { panic!() }
     }
 }
-
