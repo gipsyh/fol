@@ -1,7 +1,5 @@
-use super::{
-    op::DynOp,
-    sort::{ArrayConst, BvConst, Sort},
-};
+use super::{op::DynOp, sort::Sort};
+use crate::manager::gtm_new_term;
 use giputils::grc::Grc;
 use std::{hash::Hash, ops::Deref};
 
@@ -13,29 +11,25 @@ pub struct Term {
 impl Term {
     #[inline]
     pub fn bool_const(c: bool) -> Self {
-        Term {
-            inner: Grc::new(TermInner::Const(ConstTerm::BV(BvConst::new(&[c])))),
-        }
+        let term = TermInner::Const(ConstTerm::BV(BvConst::new(&[c])));
+        gtm_new_term(term)
     }
 
     pub fn bv_const(c: &[bool]) -> Self {
-        Term {
-            inner: Grc::new(TermInner::Const(ConstTerm::BV(BvConst::new(c)))),
-        }
+        let term = TermInner::Const(ConstTerm::BV(BvConst::new(c)));
+        gtm_new_term(term)
     }
 
     #[inline]
     pub fn new_op_term(op: impl Into<DynOp>, terms: &[Term]) -> Self {
-        Term {
-            inner: Grc::new(TermInner::Op(OpTerm::new(op, terms))),
-        }
+        let term = TermInner::Op(OpTerm::new(op, terms));
+        gtm_new_term(term)
     }
 
     #[inline]
     pub fn new_var(sort: Sort, id: u32) -> Self {
-        Term {
-            inner: Grc::new(TermInner::Var(VarTerm::new(id, sort))),
-        }
+        let term = TermInner::Var(VarTerm::new(id, sort));
+        gtm_new_term(term)
     }
 }
 
@@ -53,6 +47,23 @@ pub enum TermInner {
     Const(ConstTerm),
     Var(VarTerm),
     Op(OpTerm),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct BvConst {
+    pub(crate) c: Vec<bool>,
+}
+
+impl BvConst {
+    #[inline]
+    pub fn new(c: &[bool]) -> Self {
+        Self { c: c.to_vec() }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ArrayConst {
+    c: Vec<BvConst>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

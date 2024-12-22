@@ -2,7 +2,7 @@ use super::term::Term;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::{
-    any::{type_name, TypeId},
+    any::{TypeId, type_name},
     borrow::Borrow,
     fmt::Debug,
     hash::{Hash, Hasher},
@@ -25,6 +25,10 @@ pub trait Op: Debug + 'static {
 
     #[inline]
     fn op(&self, _terms: &[Term]) -> Term {
+        todo!()
+    }
+
+    fn bitblast(&self, _terms: &[Vec<Term>]) -> Vec<Term> {
         todo!()
     }
 }
@@ -84,7 +88,7 @@ unsafe impl Send for DynOp {}
 unsafe impl Sync for DynOp {}
 
 macro_rules! define_op {
-    ($name:ident, $num_operand:expr) => {
+    ($name:ident, $num_operand:expr, $bitblast:expr) => {
         #[derive(Hash, Debug, PartialEq, Clone, Copy)]
         pub struct $name;
         impl Op for $name {
@@ -92,18 +96,42 @@ macro_rules! define_op {
             fn num_operand(&self) -> usize {
                 $num_operand
             }
+
+            #[inline]
+            fn bitblast(&self, terms: &[Vec<Term>]) -> Vec<Term> {
+                $bitblast(terms)
+            }
         }
     };
 }
 
-define_op!(Neq, 1);
-define_op!(Not, 1);
-define_op!(Inc, 1);
-define_op!(Or, 2);
-define_op!(And, 2);
-define_op!(Uext, 2);
-define_op!(Add, 2);
-define_op!(Ite, 3);
+fn todo_bitblast(_terms: &[Vec<Term>]) -> Vec<Term> {
+    todo!()
+}
+
+define_op!(Not, 1, todo_bitblast);
+define_op!(Inc, 1, todo_bitblast);
+
+fn neq_bitblast(terms: &[Vec<Term>]) -> Vec<Term> {
+    let mut neqs = Vec::new();
+    for i in 0..terms[0].len() {
+        neqs.push(Term::new_op_term(Neq, &[
+            terms[0][i].clone(),
+            terms[1][i].clone(),
+        ]))
+    }
+    let res = neqs[1..].iter().cloned().fold(neqs[0].clone(), |acc, neq| {
+        Term::new_op_term(Or, &[acc, neq])
+    });
+    vec![res]
+}
+
+define_op!(Neq, 2, neq_bitblast);
+define_op!(Or, 2, todo_bitblast);
+define_op!(And, 2, todo_bitblast);
+define_op!(Uext, 2, todo_bitblast);
+define_op!(Add, 2, todo_bitblast);
+define_op!(Ite, 3, todo_bitblast);
 
 macro_rules! insert_op {
     ($map:expr, $($type:tt),*) => {

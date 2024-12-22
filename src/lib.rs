@@ -1,7 +1,8 @@
-mod map;
+mod manager;
 pub mod op;
 mod sort;
 mod term;
+mod bitblast;
 
 pub use sort::*;
 pub use term::*;
