@@ -193,6 +193,19 @@ impl TermManager {
     }
 
     #[inline]
+    pub fn new_op_terms_elementwise<'a>(
+        &mut self,
+        op: impl Into<DynOp> + Copy,
+        x: impl IntoIterator<Item = &'a Term>,
+        y: impl IntoIterator<Item = &'a Term>,
+    ) -> Vec<Term> {
+        x.into_iter()
+            .zip(y.into_iter())
+            .map(|(x, y)| self.new_op_term(op, [x, y]))
+            .collect()
+    }
+
+    #[inline]
     pub fn new_var(&mut self, sort: Sort) -> Term {
         let id = self.num_var;
         self.num_var += 1;
