@@ -21,6 +21,11 @@ impl TermVec {
     }
 
     #[inline]
+    pub fn item(mut self) -> Term {
+        self.data.pop().unwrap()
+    }
+
+    #[inline]
     pub fn fold(&self, op: impl Into<DynOp> + Copy) -> Term {
         let mut tm = self.get_manager();
         tm.new_op_terms_fold(op, self.iter())
