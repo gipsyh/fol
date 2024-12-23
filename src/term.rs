@@ -1,3 +1,5 @@
+use crate::TermVec;
+
 use super::{op::DynOp, sort::Sort};
 use giputils::grc::Grc;
 use std::collections::HashMap;
@@ -44,7 +46,7 @@ impl Hash for Term {
 impl Debug for Term {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Term").field("inner", &self.inner).finish()
+        self.inner.deref().fmt(f)
     }
 }
 
@@ -150,7 +152,7 @@ pub struct TermManagerInner {
     map: HashMap<TermInner, Term>,
 }
 
-#[derive(Clone, Default, Debug, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct TermManager {
     inner: Grc<TermManagerInner>,
 }
@@ -216,7 +218,7 @@ impl TermManager {
         op: impl Into<DynOp> + Copy,
         x: impl IntoIterator<Item = &'a Term>,
         y: impl IntoIterator<Item = &'a Term>,
-    ) -> Vec<Term> {
+    ) -> TermVec {
         x.into_iter()
             .zip(y.into_iter())
             .map(|(x, y)| self.new_op_term(op, [x, y]))
@@ -248,6 +250,13 @@ impl DerefMut for TermManager {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
+    }
+}
+
+impl Debug for TermManager {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TermManager").finish()
     }
 }
 

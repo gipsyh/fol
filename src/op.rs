@@ -1,5 +1,5 @@
 use super::term::Term;
-use crate::TermManager;
+use crate::{TermManager, TermVec};
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::{
@@ -30,7 +30,7 @@ pub trait Op: Debug + 'static {
     }
 
     #[inline]
-    fn bitblast(&self, _tm: &mut TermManager, _terms: &[Vec<Term>]) -> Vec<Term> {
+    fn bitblast(&self, _tm: &mut TermManager, _terms: &[TermVec]) -> TermVec {
         todo!()
     }
 }
@@ -100,49 +100,49 @@ macro_rules! define_op {
             }
 
             #[inline]
-            fn bitblast(&self, tm: &mut TermManager, terms: &[Vec<Term>]) -> Vec<Term> {
+            fn bitblast(&self, tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
                 $bitblast(tm, terms)
             }
         }
     };
 }
 
-fn todo_bitblast(_tm: &mut TermManager, _terms: &[Vec<Term>]) -> Vec<Term> {
+fn todo_bitblast(_tm: &mut TermManager, _terms: &[TermVec]) -> TermVec {
     todo!()
 }
 
-fn not_bitblast(tm: &mut TermManager, terms: &[Vec<Term>]) -> Vec<Term> {
+fn not_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     terms[0].iter().map(|t| tm.new_op_term(Not, [t])).collect()
 }
 define_op!(Not, 1, not_bitblast);
 define_op!(Inc, 1, todo_bitblast);
 
-fn neq_bitblast(tm: &mut TermManager, terms: &[Vec<Term>]) -> Vec<Term> {
+fn neq_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let neqs = tm.new_op_terms_elementwise(Neq, &terms[0], &terms[1]);
-    vec![tm.new_op_terms_fold(Or, &neqs)]
+    TermVec::from([tm.new_op_terms_fold(Or, &neqs)])
 }
 define_op!(Neq, 2, neq_bitblast);
 
-fn or_bitblast(tm: &mut TermManager, terms: &[Vec<Term>]) -> Vec<Term> {
+fn or_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     tm.new_op_terms_elementwise(Or, &terms[0], &terms[1])
 }
 define_op!(Or, 2, or_bitblast);
 
-fn and_bitblast(tm: &mut TermManager, terms: &[Vec<Term>]) -> Vec<Term> {
+fn and_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     tm.new_op_terms_elementwise(And, &terms[0], &terms[1])
 }
 define_op!(And, 2, and_bitblast);
 
-fn uext_bitblast(_tm: &mut TermManager, terms: &[Vec<Term>]) -> Vec<Term> {
+fn uext_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let mut res = terms[0].clone();
     res.extend_from_slice(&terms[1]);
     res
 }
 define_op!(Uext, 2, uext_bitblast);
 
-fn add_bitblast(tm: &mut TermManager, terms: &[Vec<Term>]) -> Vec<Term> {
+fn add_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let mut c = tm.bool_const(false);
-    let mut res = Vec::new();
+    let mut res = TermVec::new();
     for (x, y) in terms[0].iter().zip(terms[1].iter()) {
         res.push(tm.new_op_terms_fold(Xor, [x, y, &c]));
         let xy = tm.new_op_term(And, [x, y]);
@@ -155,8 +155,8 @@ fn add_bitblast(tm: &mut TermManager, terms: &[Vec<Term>]) -> Vec<Term> {
 define_op!(Add, 2, add_bitblast);
 define_op!(Xor, 2, add_bitblast);
 
-fn ite_bitblast(tm: &mut TermManager, terms: &[Vec<Term>]) -> Vec<Term> {
-    let mut res = Vec::new();
+fn ite_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+    let mut res = TermVec::new();
     for (x, y) in terms[1].iter().zip(terms[2].iter()) {
         res.push(tm.new_op_term(Ite, [&terms[0][0], x, y]));
     }

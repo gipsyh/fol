@@ -1,19 +1,29 @@
-use crate::Term;
-use std::ops::{Deref, DerefMut};
+use crate::{Term, TermManager, op::DynOp};
+use std::{
+    ops::{Deref, DerefMut, Index, IndexMut},
+    slice, vec,
+};
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
-pub struct TermCube {
-    cube: Vec<Term>,
+pub struct TermVec {
+    data: Vec<Term>,
 }
 
-impl TermCube {
+impl TermVec {
     #[inline]
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn fold_term(&self) -> Term {
-        todo!()
+    #[inline]
+    pub fn get_manager(&self) -> TermManager {
+        self[0].get_manager()
+    }
+
+    #[inline]
+    pub fn fold(&self, op: impl Into<DynOp> + Copy) -> Term {
+        let mut tm = self.get_manager();
+        tm.new_op_terms_fold(op, self.iter())
     }
 
     // #[inline]
@@ -36,18 +46,72 @@ impl TermCube {
     // }
 }
 
-impl Deref for TermCube {
+impl Deref for TermVec {
     type Target = Vec<Term>;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        &self.cube
+        &self.data
     }
 }
 
-impl DerefMut for TermCube {
+impl DerefMut for TermVec {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.cube
+        &mut self.data
+    }
+}
+
+impl Index<usize> for TermVec {
+    type Output = Term;
+
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.data[index]
+    }
+}
+
+impl IndexMut<usize> for TermVec {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.data[index]
+    }
+}
+
+impl FromIterator<Term> for TermVec {
+    #[inline]
+    fn from_iter<T: IntoIterator<Item = Term>>(iter: T) -> Self {
+        Self {
+            data: Vec::from_iter(iter),
+        }
+    }
+}
+
+impl IntoIterator for TermVec {
+    type Item = Term;
+    type IntoIter = vec::IntoIter<Term>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a TermVec {
+    type Item = &'a Term;
+    type IntoIter = slice::Iter<'a, Term>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter()
+    }
+}
+
+impl<const N: usize> From<[Term; N]> for TermVec {
+    #[inline]
+    fn from(value: [Term; N]) -> Self {
+        Self {
+            data: Vec::from(value),
+        }
     }
 }
