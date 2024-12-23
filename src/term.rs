@@ -8,8 +8,21 @@ use std::{hash::Hash, ops::Deref};
 
 #[derive(Clone)]
 pub struct Term {
-    tgc: TermGC,
+    tm: TermManager,
     pub(crate) inner: Grc<TermInner>,
+}
+
+impl Term {
+    #[inline]
+    pub fn get_manager(&self) -> TermManager {
+        self.tm.clone()
+    }
+
+    #[inline]
+    pub fn op<'a>(&self, op: impl Into<DynOp>, terms: impl IntoIterator<Item = &'a Term>) -> Term {
+        let mut tm = self.get_manager();
+        tm.new_op_term(op, terms)
+    }
 }
 
 impl Deref for Term {
@@ -38,7 +51,7 @@ impl Debug for Term {
 impl PartialEq for Term {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        debug_assert!(self.tgc == other.tgc);
+        debug_assert!(self.tm == other.tm);
         self.inner == other.inner
     }
 }
@@ -47,7 +60,8 @@ impl Eq for Term {}
 
 impl Drop for Term {
     fn drop(&mut self) {
-        self.tgc.collect(self.clone());
+        let g = self.clone();
+        self.tm.tgc.collect(g);
     }
 }
 
@@ -136,7 +150,12 @@ pub struct TermManagerInner {
     map: HashMap<TermInner, Term>,
 }
 
-impl TermManagerInner {
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
+pub struct TermManager {
+    inner: Grc<TermManagerInner>,
+}
+
+impl TermManager {
     #[inline]
     pub fn new() -> Self {
         Self::default()
@@ -148,7 +167,7 @@ impl TermManagerInner {
             Some(term) => term.clone(),
             None => {
                 let term = Term {
-                    tgc: self.tgc.clone(),
+                    tm: self.clone(),
                     inner: Grc::new(inner.clone()),
                 };
                 self.map.insert(inner, term.clone());
@@ -156,8 +175,6 @@ impl TermManagerInner {
             }
         }
     }
-
-    pub fn garbage_collect(&mut self) {}
 
     #[inline]
     pub fn bool_const(&mut self, c: bool) -> Term {
@@ -213,11 +230,9 @@ impl TermManagerInner {
         let term = TermInner::Var(VarTerm::new(id, sort));
         self.new_term(term)
     }
-}
 
-#[derive(Clone, Default, Debug)]
-pub struct TermManager {
-    inner: Grc<TermManagerInner>,
+    #[inline]
+    pub fn garbage_collect(&mut self) {}
 }
 
 impl Deref for TermManager {
@@ -378,39 +393,6 @@ impl DerefMut for TermManager {
 //     }
 // }
 
-// impl Deref for Term {
-//     type Target = TermInner;
-
-//     #[inline]
-//     fn deref(&self) -> &Self::Target {
-//         self.inner.deref()
-//     }
-// }
-
-// impl Drop for Term {
-//     #[inline]
-//     fn drop(&mut self) {
-//         if self.inner.count() == 1 {
-//             self.inner.increment_count();
-//             // TERMMAP.remove(&self.inner);
-//         }
-//     }
-// }
-
-// impl PartialOrd for Term {
-//     #[inline]
-//     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-//         Some(self.cmp(other))
-//     }
-// }
-
-// impl Ord for Term {
-//     #[inline]
-//     fn cmp(&self, other: &Self) -> Ordering {
-//         self.term_id().cmp(&other.term_id())
-//     }
-// }
-
 // unsafe impl Sync for Term {}
 
 // unsafe impl Send for Term {}
@@ -429,67 +411,6 @@ impl DerefMut for TermManager {
 // unsafe impl Sync for TermInner {}
 
 // unsafe impl Send for TermInner {}
-
-// #[derive(Clone, Default, PartialEq, Eq)]
-// pub struct TermCube {
-//     cube: Vec<Term>,
-// }
-
-// impl Debug for TermCube {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         self.cube.fmt(f)
-//     }
-// }
-
-// impl TermCube {
-//     #[inline]
-//     pub fn new() -> Self {
-//         Self::default()
-//     }
-
-//     pub fn term(&self) -> Term {
-//         let mut term = Term::bool_const(true);
-//         for l in self.iter() {
-//             term = term.and(l);
-//         }
-//         term
-//     }
-
-//     #[inline]
-//     pub fn ordered_subsume(&self, cube: &TermCube) -> bool {
-//         debug_assert!(self.is_sorted());
-//         debug_assert!(cube.is_sorted());
-//         if self.len() > cube.len() {
-//             return false;
-//         }
-//         let mut j = 0;
-//         for i in 0..self.len() {
-//             while j < cube.len() && self[i] > cube[j] {
-//                 j += 1;
-//             }
-//             if j == cube.len() || self[i] != cube[j] {
-//                 return false;
-//             }
-//         }
-//         true
-//     }
-// }
-
-// impl Deref for TermCube {
-//     type Target = Vec<Term>;
-
-//     #[inline]
-//     fn deref(&self) -> &Self::Target {
-//         &self.cube
-//     }
-// }
-
-// impl DerefMut for TermCube {
-//     #[inline]
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.cube
-//     }
-// }
 
 // impl PartialOrd for TermCube {
 //     #[inline]
