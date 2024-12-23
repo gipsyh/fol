@@ -3,6 +3,7 @@ use giputils::grc::Grc;
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
 use std::hash;
+use std::ops::DerefMut;
 use std::{hash::Hash, ops::Deref};
 
 #[derive(Clone)]
@@ -129,13 +130,13 @@ impl TermGC {
 }
 
 #[derive(Default, Debug)]
-pub struct TermManager {
+pub struct TermManagerInner {
     tgc: TermGC,
     num_var: u32,
     map: HashMap<TermInner, Term>,
 }
 
-impl TermManager {
+impl TermManagerInner {
     #[inline]
     pub fn new() -> Self {
         Self::default()
@@ -211,6 +212,27 @@ impl TermManager {
         self.num_var += 1;
         let term = TermInner::Var(VarTerm::new(id, sort));
         self.new_term(term)
+    }
+}
+
+#[derive(Clone, Default, Debug)]
+pub struct TermManager {
+    inner: Grc<TermManagerInner>,
+}
+
+impl Deref for TermManager {
+    type Target = TermManagerInner;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl DerefMut for TermManager {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
     }
 }
 
