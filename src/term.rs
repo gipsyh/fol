@@ -1,6 +1,5 @@
-use crate::TermVec;
-
 use super::{op::DynOp, sort::Sort};
+use crate::TermVec;
 use giputils::grc::Grc;
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
@@ -235,6 +234,11 @@ impl TermManager {
 
     #[inline]
     pub fn garbage_collect(&mut self) {}
+
+    #[inline]
+    pub fn size(&self) -> usize {
+        self.map.len()
+    }
 }
 
 impl Deref for TermManager {
