@@ -110,7 +110,6 @@ macro_rules! define_op {
 
             #[inline]
             fn cnf_encode(&self, dc: &mut DagCnf, terms: &[Lit]) -> Lit {
-                dbg!(self);
                 debug_assert!(self.num_operand() == terms.len());
                 $cnf_encode(dc, terms)
             }
