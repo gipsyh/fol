@@ -1,6 +1,7 @@
 use super::term::Term;
 use crate::{TermManager, TermVec};
 use lazy_static::lazy_static;
+use logic_form::{DagCnfBuilder, Lit};
 use std::collections::HashMap;
 use std::{
     any::{TypeId, type_name},
@@ -24,13 +25,15 @@ pub trait Op: Debug + 'static {
 
     fn num_operand(&self) -> usize;
 
-    #[inline]
     fn op(&self, _tm: &mut TermManager, _terms: &[Term]) -> Term {
         todo!()
     }
 
-    #[inline]
     fn bitblast(&self, _tm: &mut TermManager, _terms: &[TermVec]) -> TermVec {
+        todo!()
+    }
+
+    fn cnf_encode(&self, _cb: &mut DagCnfBuilder, _terms: &[Lit]) -> Lit {
         todo!()
     }
 }
@@ -90,7 +93,7 @@ unsafe impl Send for DynOp {}
 unsafe impl Sync for DynOp {}
 
 macro_rules! define_op {
-    ($name:ident, $num_operand:expr, $bitblast:expr) => {
+    ($name:ident, $num_operand:expr, $bitblast:expr, $cnf_encode:expr) => {
         #[derive(Hash, Debug, PartialEq, Clone, Copy)]
         pub struct $name;
         impl Op for $name {
@@ -101,7 +104,14 @@ macro_rules! define_op {
 
             #[inline]
             fn bitblast(&self, tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+                debug_assert!(self.num_operand() == terms.len());
                 $bitblast(tm, terms)
+            }
+
+            #[inline]
+            fn cnf_encode(&self, cb: &mut DagCnfBuilder, terms: &[Lit]) -> Lit {
+                debug_assert!(self.num_operand() == terms.len());
+                $cnf_encode(cb, terms)
             }
         }
     };
@@ -110,35 +120,46 @@ macro_rules! define_op {
 fn todo_bitblast(_tm: &mut TermManager, _terms: &[TermVec]) -> TermVec {
     todo!()
 }
+fn todo_cnf_encode(_cb: &mut DagCnfBuilder, _terms: &[Lit]) -> Lit {
+    todo!()
+}
 
 fn not_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     terms[0].iter().map(|t| tm.new_op_term(Not, [t])).collect()
 }
-define_op!(Not, 1, not_bitblast);
-define_op!(Inc, 1, todo_bitblast);
+fn not_cnf_encode(_cb: &mut DagCnfBuilder, terms: &[Lit]) -> Lit {
+    !terms[0]
+}
+define_op!(Not, 1, not_bitblast, not_cnf_encode);
+define_op!(Inc, 1, todo_bitblast, todo_cnf_encode);
 
 fn neq_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let neqs = tm.new_op_terms_elementwise(Neq, &terms[0], &terms[1]);
     TermVec::from([tm.new_op_terms_fold(Or, &neqs)])
 }
-define_op!(Neq, 2, neq_bitblast);
+fn neq_cnf_encode(cb: &mut DagCnfBuilder, terms: &[Lit]) -> Lit {
+    let l = cb.new_var().lit();
+    cb.add_xor_rel(l, terms[0], terms[1]);
+    l
+}
+define_op!(Neq, 2, neq_bitblast, neq_cnf_encode);
 
 fn or_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     tm.new_op_terms_elementwise(Or, &terms[0], &terms[1])
 }
-define_op!(Or, 2, or_bitblast);
+define_op!(Or, 2, or_bitblast, todo_cnf_encode);
 
 fn and_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     tm.new_op_terms_elementwise(And, &terms[0], &terms[1])
 }
-define_op!(And, 2, and_bitblast);
+define_op!(And, 2, and_bitblast, todo_cnf_encode);
 
 fn uext_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let mut res = terms[0].clone();
     res.extend_from_slice(&terms[1]);
     res
 }
-define_op!(Uext, 2, uext_bitblast);
+define_op!(Uext, 2, uext_bitblast, todo_cnf_encode);
 
 fn add_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let mut c = tm.bool_const(false);
@@ -152,8 +173,8 @@ fn add_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     }
     res
 }
-define_op!(Add, 2, add_bitblast);
-define_op!(Xor, 2, add_bitblast);
+define_op!(Add, 2, add_bitblast, todo_cnf_encode);
+define_op!(Xor, 2, add_bitblast, todo_cnf_encode);
 
 fn ite_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let mut res = TermVec::new();
@@ -162,7 +183,7 @@ fn ite_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     }
     res
 }
-define_op!(Ite, 3, ite_bitblast);
+define_op!(Ite, 3, ite_bitblast, todo_cnf_encode);
 
 macro_rules! insert_op {
     ($map:expr, $($type:tt),*) => {

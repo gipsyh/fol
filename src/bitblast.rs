@@ -1,5 +1,5 @@
 use crate::{BvConst, ConstTerm, Sort, Term, TermInner, TermManager, TermVec, VarTerm};
-use logic_form::{DagCnfBuilder, Lit, Var};
+use logic_form::{DagCnfBuilder, Lit};
 use std::{collections::HashMap, iter::repeat_with, ops::Deref};
 
 impl BvConst {
@@ -9,9 +9,9 @@ impl BvConst {
     }
 
     #[inline]
-    pub fn cnf_encode(&self, _cb: &mut DagCnfBuilder) -> Lit {
+    pub fn cnf_encode(&self) -> Lit {
         debug_assert!(self.bv_len() == 1);
-        Lit::constant_lit(self.c[0]) 
+        Lit::constant(self.c[0])
     }
 }
 
@@ -20,6 +20,14 @@ impl ConstTerm {
     pub fn bitblast(&self, tm: &mut TermManager) -> TermVec {
         match self {
             ConstTerm::BV(bv_const) => bv_const.bitblast(tm),
+            ConstTerm::Array(_) => todo!(),
+        }
+    }
+
+    #[inline]
+    pub fn cnf_encode(&self) -> Lit {
+        match self {
+            ConstTerm::BV(bv_const) => bv_const.cnf_encode(),
             ConstTerm::Array(_) => todo!(),
         }
     }
@@ -41,7 +49,7 @@ impl Term {
         }
         let blast = match self.deref() {
             TermInner::Const(const_term) => const_term.bitblast(tm),
-            TermInner::Var(vat_term) => vat_term.bitblast(tm),
+            TermInner::Var(var_term) => var_term.bitblast(tm),
             TermInner::Op(op_term) => {
                 let terms: Vec<TermVec> =
                     op_term.terms.iter().map(|s| s.bitblast(tm, map)).collect();
@@ -52,21 +60,24 @@ impl Term {
         map.get(self).unwrap().clone()
     }
 
-    pub fn cnf_encode(&self, cb: &mut DagCnfBuilder, map: &mut HashMap<Term, Var>) -> Var {
+    pub fn cnf_encode(&self, cb: &mut DagCnfBuilder, map: &mut HashMap<Term, Lit>) -> Lit {
         if let Some(res) = map.get(self) {
             return res.clone();
         }
         let blast = match self.deref() {
-            TermInner::Const(const_term) => const_term.(tm),
-            TermInner::Var(vat_term) => vat_term.bitblast(tm),
+            TermInner::Const(const_term) => const_term.cnf_encode(),
+            TermInner::Var(_) => cb.new_var().lit(),
             TermInner::Op(op_term) => {
-                let terms: Vec<TermVec> =
-                    op_term.terms.iter().map(|s| s.bitblast(tm, map)).collect();
-                op_term.op.bitblast(tm, &terms)
+                let terms: Vec<Lit> = op_term
+                    .terms
+                    .iter()
+                    .map(|s| s.cnf_encode(cb, map))
+                    .collect();
+                op_term.op.cnf_encode(cb, &terms)
             }
         };
-        map.insert(self.clone(), blast.clone());
-        map.get(self).unwrap().clone()
+        map.insert(self.clone(), blast);
+        *map.get(self).unwrap()
     }
 }
 
