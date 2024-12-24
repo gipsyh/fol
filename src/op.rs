@@ -3,6 +3,7 @@ use crate::{TermManager, TermVec};
 use lazy_static::lazy_static;
 use logic_form::{DagCnf, Lit};
 use std::collections::HashMap;
+use std::fmt;
 use std::{
     any::{TypeId, type_name},
     borrow::Borrow,
@@ -38,7 +39,7 @@ pub trait Op: Debug + 'static {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct DynOp {
     op: Rc<dyn Op>,
 }
@@ -62,6 +63,13 @@ impl Deref for DynOp {
     #[inline]
     fn deref(&self) -> &Self::Target {
         self.op.borrow()
+    }
+}
+
+impl Debug for DynOp {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.op.fmt(f)
     }
 }
 
@@ -131,7 +139,13 @@ fn not_cnf_encode(_dc: &mut DagCnf, terms: &[Lit]) -> Lit {
     !terms[0]
 }
 define_op!(Not, 1, not_bitblast, not_cnf_encode);
+
 define_op!(Inc, 1, todo_bitblast, todo_cnf_encode);
+
+fn redor_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+    TermVec::from([tm.new_op_terms_fold(Or, &terms[0])])
+}
+define_op!(Redor, 1, redor_bitblast, todo_cnf_encode);
 
 fn neq_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let neqs = tm.new_op_terms_elementwise(Neq, &terms[0], &terms[1]);
@@ -221,7 +235,7 @@ macro_rules! insert_op {
 lazy_static! {
     static ref OP_MAP: HashMap<String, DynOp> = {
         let mut m = HashMap::new();
-        insert_op!(m, Not, Inc, Or, Neq, And, Uext, Add, Ite, Xor);
+        insert_op!(m, Not, Inc, Or, Neq, And, Uext, Add, Ite, Xor, Redor);
         m
     };
 }

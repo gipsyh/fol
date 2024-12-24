@@ -66,7 +66,7 @@ impl Drop for Term {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum TermInner {
     Const(ConstTerm),
     Var(VarTerm),
@@ -81,7 +81,18 @@ impl TermInner {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+impl Debug for TermInner {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Const(x) => x.fmt(f),
+            Self::Var(x) => x.fmt(f),
+            Self::Op(x) => x.fmt(f),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct BvConst {
     pub(crate) c: Vec<bool>,
 }
@@ -98,6 +109,13 @@ impl BvConst {
     }
 }
 
+impl Debug for BvConst {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("BvConst").field(&self.c).finish()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ArrayConst {
     c: Vec<BvConst>,
@@ -109,7 +127,7 @@ pub enum ConstTerm {
     Array(ArrayConst),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct VarTerm {
     pub id: u32,
     pub sort: Sort,
@@ -118,6 +136,16 @@ pub struct VarTerm {
 impl VarTerm {
     pub fn new(id: u32, sort: Sort) -> Self {
         Self { id, sort }
+    }
+}
+
+impl Debug for VarTerm {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("VarTerm")
+            .field(&self.id)
+            .field(&self.sort)
+            .finish()
     }
 }
 
@@ -265,7 +293,9 @@ impl DerefMut for TermManager {
 impl Debug for TermManager {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TermManager").finish()
+        f.debug_struct("TermManager")
+            .field("size", &self.size())
+            .finish()
     }
 }
 
