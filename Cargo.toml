@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 lazy_static = "1.5.0"
 giputils = { path = "../giputils", version = "0.2" }
+logic-form = { path = "../logic-form", version = "0.2.6" }

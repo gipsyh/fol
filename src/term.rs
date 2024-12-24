@@ -91,6 +91,11 @@ impl BvConst {
     pub fn new(c: &[bool]) -> Self {
         Self { c: c.to_vec() }
     }
+
+    #[inline]
+    pub fn bv_len(&self) -> usize {
+        self.c.len()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
