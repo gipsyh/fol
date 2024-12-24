@@ -1,7 +1,7 @@
 use super::term::Term;
 use crate::{TermManager, TermVec};
 use lazy_static::lazy_static;
-use logic_form::{DagCnfBuilder, Lit};
+use logic_form::{DagCnf, Lit};
 use std::collections::HashMap;
 use std::{
     any::{TypeId, type_name},
@@ -33,7 +33,7 @@ pub trait Op: Debug + 'static {
         todo!()
     }
 
-    fn cnf_encode(&self, _cb: &mut DagCnfBuilder, _terms: &[Lit]) -> Lit {
+    fn cnf_encode(&self, _dc: &mut DagCnf, _terms: &[Lit]) -> Lit {
         todo!()
     }
 }
@@ -109,9 +109,9 @@ macro_rules! define_op {
             }
 
             #[inline]
-            fn cnf_encode(&self, cb: &mut DagCnfBuilder, terms: &[Lit]) -> Lit {
+            fn cnf_encode(&self, dc: &mut DagCnf, terms: &[Lit]) -> Lit {
                 debug_assert!(self.num_operand() == terms.len());
-                $cnf_encode(cb, terms)
+                $cnf_encode(dc, terms)
             }
         }
     };
@@ -120,14 +120,14 @@ macro_rules! define_op {
 fn todo_bitblast(_tm: &mut TermManager, _terms: &[TermVec]) -> TermVec {
     todo!()
 }
-fn todo_cnf_encode(_cb: &mut DagCnfBuilder, _terms: &[Lit]) -> Lit {
+fn todo_cnf_encode(_dc: &mut DagCnf, _terms: &[Lit]) -> Lit {
     todo!()
 }
 
 fn not_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     terms[0].iter().map(|t| tm.new_op_term(Not, [t])).collect()
 }
-fn not_cnf_encode(_cb: &mut DagCnfBuilder, terms: &[Lit]) -> Lit {
+fn not_cnf_encode(_dc: &mut DagCnf, terms: &[Lit]) -> Lit {
     !terms[0]
 }
 define_op!(Not, 1, not_bitblast, not_cnf_encode);
@@ -137,9 +137,9 @@ fn neq_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let neqs = tm.new_op_terms_elementwise(Neq, &terms[0], &terms[1]);
     TermVec::from([tm.new_op_terms_fold(Or, &neqs)])
 }
-fn neq_cnf_encode(cb: &mut DagCnfBuilder, terms: &[Lit]) -> Lit {
-    let l = cb.new_var().lit();
-    cb.add_xor_rel(l, terms[0], terms[1]);
+fn neq_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
+    let l = dc.new_var().lit();
+    dc.add_xor_rel(l, terms[0], terms[1]);
     l
 }
 define_op!(Neq, 2, neq_bitblast, neq_cnf_encode);

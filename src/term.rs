@@ -224,7 +224,7 @@ impl TermManager {
         y: impl IntoIterator<Item = &'a Term>,
     ) -> TermVec {
         x.into_iter()
-            .zip(y.into_iter())
+            .zip(y)
             .map(|(x, y)| self.new_op_term(op, [x, y]))
             .collect()
     }

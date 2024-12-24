@@ -1,5 +1,5 @@
 use crate::{BvConst, ConstTerm, Sort, Term, TermInner, TermManager, TermVec, VarTerm};
-use logic_form::{DagCnfBuilder, Lit};
+use logic_form::{DagCnf, Lit};
 use std::{collections::HashMap, iter::repeat_with, ops::Deref};
 
 impl BvConst {
@@ -60,9 +60,9 @@ impl Term {
         map.get(self).unwrap().clone()
     }
 
-    pub fn cnf_encode(&self, cb: &mut DagCnfBuilder, map: &mut HashMap<Term, Lit>) -> Lit {
+    pub fn cnf_encode(&self, cb: &mut DagCnf, map: &mut HashMap<Term, Lit>) -> Lit {
         if let Some(res) = map.get(self) {
-            return res.clone();
+            return *res;
         }
         let blast = match self.deref() {
             TermInner::Const(const_term) => const_term.cnf_encode(),
@@ -87,4 +87,12 @@ pub fn bitblast_terms<'a, I: IntoIterator<Item = &'a Term>>(
     map: &mut HashMap<Term, TermVec>,
 ) -> impl Iterator<Item = TermVec> {
     terms.into_iter().map(|t| t.bitblast(tm, map))
+}
+
+pub fn cnf_encode_terms<'a, I: IntoIterator<Item = &'a Term>>(
+    terms: I,
+    dc: &mut DagCnf,
+    map: &mut HashMap<Term, Lit>,
+) -> impl Iterator<Item = Lit> {
+    terms.into_iter().map(|t| t.cnf_encode(dc, map))
 }
