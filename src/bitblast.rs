@@ -60,20 +60,20 @@ impl Term {
         map.get(self).unwrap().clone()
     }
 
-    pub fn cnf_encode(&self, cb: &mut DagCnf, map: &mut HashMap<Term, Lit>) -> Lit {
+    pub fn cnf_encode(&self, dc: &mut DagCnf, map: &mut HashMap<Term, Lit>) -> Lit {
         if let Some(res) = map.get(self) {
             return *res;
         }
         let blast = match self.deref() {
             TermInner::Const(const_term) => const_term.cnf_encode(),
-            TermInner::Var(_) => cb.new_var().lit(),
+            TermInner::Var(_) => dc.new_var().lit(),
             TermInner::Op(op_term) => {
                 let terms: Vec<Lit> = op_term
                     .terms
                     .iter()
-                    .map(|s| s.cnf_encode(cb, map))
+                    .map(|s| s.cnf_encode(dc, map))
                     .collect();
-                op_term.op.cnf_encode(cb, &terms)
+                op_term.op.cnf_encode(dc, &terms)
             }
         };
         map.insert(self.clone(), blast);

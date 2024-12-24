@@ -110,6 +110,7 @@ macro_rules! define_op {
 
             #[inline]
             fn cnf_encode(&self, dc: &mut DagCnf, terms: &[Lit]) -> Lit {
+                dbg!(self);
                 debug_assert!(self.num_operand() == terms.len());
                 $cnf_encode(dc, terms)
             }
@@ -147,12 +148,22 @@ define_op!(Neq, 2, neq_bitblast, neq_cnf_encode);
 fn or_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     tm.new_op_terms_elementwise(Or, &terms[0], &terms[1])
 }
-define_op!(Or, 2, or_bitblast, todo_cnf_encode);
+fn or_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
+    let l = dc.new_var().lit();
+    dc.add_or_rel(l, terms[0], terms[1]);
+    l
+}
+define_op!(Or, 2, or_bitblast, or_cnf_encode);
 
 fn and_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     tm.new_op_terms_elementwise(And, &terms[0], &terms[1])
 }
-define_op!(And, 2, and_bitblast, todo_cnf_encode);
+fn and_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
+    let l = dc.new_var().lit();
+    dc.add_and_rel(l, terms[0], terms[1]);
+    l
+}
+define_op!(And, 2, and_bitblast, and_cnf_encode);
 
 fn uext_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let mut res = terms[0].clone();
@@ -174,7 +185,13 @@ fn add_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     res
 }
 define_op!(Add, 2, add_bitblast, todo_cnf_encode);
-define_op!(Xor, 2, add_bitblast, todo_cnf_encode);
+
+fn xor_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
+    let l = dc.new_var().lit();
+    dc.add_xor_rel(l, terms[0], terms[1]);
+    l
+}
+define_op!(Xor, 2, todo_bitblast, xor_cnf_encode);
 
 fn ite_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let mut res = TermVec::new();
@@ -183,7 +200,12 @@ fn ite_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     }
     res
 }
-define_op!(Ite, 3, ite_bitblast, todo_cnf_encode);
+fn ite_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
+    let l = dc.new_var().lit();
+    dc.add_ite_rel(l, terms[0], terms[1], terms[2]);
+    l
+}
+define_op!(Ite, 3, ite_bitblast, ite_cnf_encode);
 
 macro_rules! insert_op {
     ($map:expr, $($type:tt),*) => {
