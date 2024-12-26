@@ -1,11 +1,13 @@
+mod core_op;
 mod define;
-mod ops;
+mod other_op;
 
 use super::term::Term;
 use crate::{TermManager, TermVec};
+pub use core_op::*;
 use lazy_static::lazy_static;
 use logic_form::{DagCnf, Lit};
-pub use ops::*;
+pub use other_op::*;
 use std::collections::HashMap;
 use std::fmt;
 use std::{
@@ -31,6 +33,10 @@ pub trait Op: Debug + 'static {
     fn num_operand(&self) -> usize;
 
     fn op(&self, _tm: &mut TermManager, _terms: &[Term]) -> Term {
+        todo!()
+    }
+
+    fn normalize(&self, _tm: &mut TermManager, _terms: &[Term]) -> Term {
         todo!()
     }
 
@@ -91,7 +97,7 @@ impl PartialEq for DynOp {
     }
 }
 
-impl Eq for DynOp {}
+impl std::cmp::Eq for DynOp {}
 
 impl<O: Op> PartialEq<O> for DynOp {
     #[inline]
@@ -125,3 +131,71 @@ impl From<&str> for DynOp {
         OP_MAP.get(&value.to_lowercase()).unwrap().clone()
     }
 }
+
+// #[derive(Debug, Copy, Clone, strum::EnumString, strum::Display, PartialEq, Eq, Hash)]
+// #[strum(serialize_all = "lowercase")]
+// pub enum UniOpType {
+//     Dec,
+//     Neg,
+//     Redand,
+//     Redor,
+//     Redxor,
+// }
+
+// #[derive(Debug, Copy, Clone, strum::EnumString, strum::Display, PartialEq, Eq, Hash)]
+// #[strum(serialize_all = "lowercase")]
+// pub enum BiOpType {
+//     Iff,
+//     Implies,
+//     Sgt,
+//     Ugt,
+//     Sgte,
+//     Slt,
+//     Ult,
+//     Slte,
+//     Ulte,
+//     And,
+//     Nand,
+//     Nor,
+//     Rol,
+//     Ror,
+//     Sll,
+//     Sra,
+//     Srl,
+//     Add,
+//     Mul,
+//     Sdiv,
+//     Udiv,
+//     Smod,
+//     Srem,
+//     Urem,
+//     Saddo,
+//     Uaddo,
+//     Sdivo,
+//     Udivo,
+//     Smulo,
+//     Umulo,
+//     Ssubo,
+//     Usubo,
+//     Read,
+// }
+
+// #[derive(Debug, Copy, Clone, strum::EnumString, strum::Display, PartialEq, Eq, Hash)]
+// #[strum(serialize_all = "lowercase")]
+// pub enum TriOpType {
+//     Write,
+// }
+
+// #[derive(Debug, Copy, Clone, strum::EnumString, strum::Display, PartialEq, Eq, Hash)]
+// #[strum(serialize_all = "lowercase")]
+// pub enum ExtOpType {
+//     Sext,
+//     Uext,
+// }
+
+// #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+// pub struct SliceOp {
+//     pub a: Term,
+//     pub upper: u32,
+//     pub lower: u32,
+// }

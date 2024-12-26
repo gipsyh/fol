@@ -223,6 +223,28 @@ impl TermManager {
     }
 
     #[inline]
+    pub fn bv_const_zero(&mut self, len: usize) -> Term {
+        let c = vec![false; len];
+        let term = TermInner::Const(ConstTerm::BV(BvConst::new(&c)));
+        self.new_term(term)
+    }
+
+    #[inline]
+    pub fn bv_const_one(&mut self, len: usize) -> Term {
+        let mut c = vec![false; len];
+        c[0] = true;
+        let term = TermInner::Const(ConstTerm::BV(BvConst::new(&c)));
+        self.new_term(term)
+    }
+
+    #[inline]
+    pub fn bv_const_ones(&mut self, len: usize) -> Term {
+        let c = vec![true; len];
+        let term = TermInner::Const(ConstTerm::BV(BvConst::new(&c)));
+        self.new_term(term)
+    }
+
+    #[inline]
     pub fn new_op_term<'a>(
         &mut self,
         op: impl Into<DynOp>,
