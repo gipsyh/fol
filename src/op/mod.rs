@@ -3,7 +3,7 @@ mod define;
 mod other_op;
 
 use super::term::Term;
-use crate::{TermManager, TermVec};
+use crate::{Sort, TermManager, TermVec};
 pub use core_op::*;
 use lazy_static::lazy_static;
 use logic_form::{DagCnf, Lit};
@@ -32,7 +32,7 @@ pub trait Op: Debug + 'static {
 
     fn num_operand(&self) -> usize;
 
-    fn op(&self, _tm: &mut TermManager, _terms: &[Term]) -> Term {
+    fn sort(&self, _terms: &[Term]) -> Sort {
         todo!()
     }
 
@@ -62,6 +62,7 @@ impl DynOp {
 }
 
 impl<T: Op> From<T> for DynOp {
+    #[inline]
     fn from(op: T) -> Self {
         Self::new(op)
     }

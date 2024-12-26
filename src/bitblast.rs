@@ -1,4 +1,4 @@
-use crate::{BvConst, ConstTerm, Sort, Term, TermInner, TermManager, TermVec, VarTerm};
+use crate::{BvConst, ConstTerm, Sort, Term, TermManager, TermType, TermVec};
 use logic_form::{DagCnf, Lit};
 use std::{collections::HashMap, iter::repeat_with, ops::Deref};
 
@@ -33,13 +33,10 @@ impl ConstTerm {
     }
 }
 
-impl VarTerm {
-    #[inline]
-    pub fn bitblast(&self, tm: &mut TermManager) -> TermVec {
-        repeat_with(|| tm.new_var(Sort::bool_sort()))
-            .take(self.sort.bv_len())
-            .collect()
-    }
+pub fn var_bitblast(tm: &mut TermManager, sort: Sort) -> TermVec {
+    repeat_with(|| tm.new_var(Sort::bool_sort()))
+        .take(sort.bv_len())
+        .collect()
 }
 
 impl Term {
@@ -48,9 +45,9 @@ impl Term {
             return res.clone();
         }
         let blast = match self.deref() {
-            TermInner::Const(const_term) => const_term.bitblast(tm),
-            TermInner::Var(var_term) => var_term.bitblast(tm),
-            TermInner::Op(op_term) => {
+            TermType::Const(const_term) => const_term.bitblast(tm),
+            TermType::Var(_) => var_bitblast(tm, self.sort()),
+            TermType::Op(op_term) => {
                 let terms: Vec<TermVec> =
                     op_term.terms.iter().map(|s| s.bitblast(tm, map)).collect();
                 op_term.op.bitblast(tm, &terms)
@@ -65,9 +62,9 @@ impl Term {
             return *res;
         }
         let blast = match self.deref() {
-            TermInner::Const(const_term) => const_term.cnf_encode(),
-            TermInner::Var(_) => dc.new_var().lit(),
-            TermInner::Op(op_term) => {
+            TermType::Const(const_term) => const_term.cnf_encode(),
+            TermType::Var(_) => dc.new_var().lit(),
+            TermType::Op(op_term) => {
                 let terms: Vec<Lit> = op_term
                     .terms
                     .iter()
