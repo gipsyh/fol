@@ -30,22 +30,28 @@ pub trait Op: Debug + 'static {
         type_name::<Self>().split("::").last().unwrap()
     }
 
+    #[inline]
+    fn is_core(&self) -> bool {
+        false
+    }
+
     fn num_operand(&self) -> usize;
 
-    fn sort(&self, _terms: &[Term]) -> Sort {
-        todo!()
+    #[inline]
+    fn sort(&self, terms: &[Term]) -> Sort {
+        terms[0].sort()
     }
 
     fn normalize(&self, _tm: &mut TermManager, _terms: &[Term]) -> Term {
-        todo!()
+        panic!("{:?} not support normalize", self);
     }
 
     fn bitblast(&self, _tm: &mut TermManager, _terms: &[TermVec]) -> TermVec {
-        todo!()
+        panic!("{:?} not support biblast", self);
     }
 
     fn cnf_encode(&self, _dc: &mut DagCnf, _terms: &[Lit]) -> Lit {
-        todo!()
+        panic!("{:?} not support cnf_encode", self);
     }
 }
 

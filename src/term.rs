@@ -246,11 +246,15 @@ impl TermManager {
     #[inline]
     pub fn new_op_term<'a>(
         &mut self,
-        op: impl Into<DynOp> + Copy,
+        op: impl Into<DynOp>,
         terms: impl IntoIterator<Item = &'a Term>,
     ) -> Term {
+        let op: DynOp = op.into();
         let terms: Vec<Term> = terms.into_iter().map(|t| (*t).clone()).collect();
-        let sort = op.into().sort(&terms);
+        if !op.is_core() {
+            return op.normalize(self, &terms);
+        }
+        let sort = op.sort(&terms);
         let term = TermType::Op(OpTerm::new(op, terms));
         self.new_term(term, sort)
     }
