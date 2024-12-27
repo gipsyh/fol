@@ -92,6 +92,16 @@ fn concat_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     res
 }
 
+define_core_op!(Slice, 3, sort: slice_sort, bitblast: slice_bitblast);
+fn slice_sort(terms: &[Term]) -> Sort {
+    Sort::Bv(terms[1].bv_len() - terms[2].bv_len() + 1)
+}
+fn slice_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+    let l = terms[2].len();
+    let h = terms[1].len();
+    terms[0].get(l..=h).unwrap().iter().cloned().collect()
+}
+
 define_core_op!(Add, 2, bitblast: add_bitblast);
 fn add_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let mut c = tm.bool_const(false);

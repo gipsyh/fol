@@ -24,6 +24,16 @@ fn uext_normalize(tm: &mut TermManager, terms: &[Term]) -> Term {
     tm.new_op_term(Concat, &[terms[1].clone(), terms[0].clone()])
 }
 
+define_non_core_op!(Ugt, 2, ugt_normalize);
+fn ugt_normalize(_tm: &mut TermManager, terms: &[Term]) -> Term {
+    terms[1].op1(Ult, &terms[0])
+}
+
+define_non_core_op!(Ulte, 2, ulte_normalize);
+fn ulte_normalize(_tm: &mut TermManager, terms: &[Term]) -> Term {
+    !terms[1].op1(Ult, &terms[0])
+}
+
 define_non_core_op!(Ugte, 2, ugte_normalize);
 fn ugte_normalize(tm: &mut TermManager, terms: &[Term]) -> Term {
     !tm.new_op_term(Ult, terms)
