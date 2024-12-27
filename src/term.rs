@@ -1,9 +1,11 @@
 use super::{op::DynOp, sort::Sort};
 use crate::TermVec;
+use crate::op::{And, Not, Or};
 use giputils::grc::Grc;
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
 use std::hash;
+use std::ops;
 use std::ops::DerefMut;
 use std::{hash::Hash, ops::Deref};
 
@@ -26,12 +28,30 @@ impl Term {
 
     #[inline]
     pub fn op<'a>(
-        &self,
-        op: impl Into<DynOp> + Copy,
+        &'a self,
+        op: impl Into<DynOp>,
         terms: impl IntoIterator<Item = &'a Term>,
     ) -> Term {
         let mut tm = self.get_manager();
-        tm.new_op_term(op, terms)
+        tm.new_op_term(op.into(), [self].into_iter().chain(terms))
+    }
+
+    #[inline]
+    pub fn op0(&self, op: impl Into<DynOp>) -> Term {
+        let mut tm = self.get_manager();
+        tm.new_op_term(op.into(), [self])
+    }
+
+    #[inline]
+    pub fn op1(&self, op: impl Into<DynOp>, x: &Term) -> Term {
+        let mut tm = self.get_manager();
+        tm.new_op_term(op.into(), [self, x])
+    }
+
+    #[inline]
+    pub fn op2(&self, op: impl Into<DynOp>, x: &Term, y: &Term) -> Term {
+        let mut tm = self.get_manager();
+        tm.new_op_term(op.into(), [self, x, y])
     }
 }
 
@@ -68,10 +88,71 @@ impl PartialEq for Term {
 
 impl Eq for Term {}
 
+impl AsRef<Term> for Term {
+    #[inline]
+    fn as_ref(&self) -> &Term {
+        self
+    }
+}
+
 impl Drop for Term {
     fn drop(&mut self) {
         let g = self.clone();
         self.tm.tgc.collect(g);
+    }
+}
+
+impl ops::Not for Term {
+    type Output = Term;
+
+    #[inline]
+    fn not(self) -> Self::Output {
+        self.op0(Not)
+    }
+}
+
+impl ops::Not for &Term {
+    type Output = Term;
+
+    #[inline]
+    fn not(self) -> Self::Output {
+        self.op0(Not)
+    }
+}
+
+impl<T: AsRef<Term>> ops::BitAnd<T> for Term {
+    type Output = Term;
+
+    #[inline]
+    fn bitand(self, rhs: T) -> Self::Output {
+        self.op1(And, rhs.as_ref())
+    }
+}
+
+impl<T: AsRef<Term>> ops::BitAnd<T> for &Term {
+    type Output = Term;
+
+    #[inline]
+    fn bitand(self, rhs: T) -> Self::Output {
+        self.op1(And, rhs.as_ref())
+    }
+}
+
+impl<T: AsRef<Term>> ops::BitOr<T> for Term {
+    type Output = Term;
+
+    #[inline]
+    fn bitor(self, rhs: T) -> Self::Output {
+        self.op1(Or, rhs.as_ref())
+    }
+}
+
+impl<T: AsRef<Term>> ops::BitOr<T> for &Term {
+    type Output = Term;
+
+    #[inline]
+    fn bitor(self, rhs: T) -> Self::Output {
+        self.op1(Or, rhs.as_ref())
     }
 }
 
