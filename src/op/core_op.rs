@@ -65,7 +65,10 @@ fn ult_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     TermVec::from([res])
 }
 
-define_core_op!(Ite, 3, sort: bool_sort, bitblast: ite_bitblast, cnf_encode: ite_cnf_encode);
+define_core_op!(Ite, 3, sort: ite_sort, bitblast: ite_bitblast, cnf_encode: ite_cnf_encode);
+fn ite_sort(terms: &[Term]) -> Sort {
+    terms[1].sort()
+}
 fn ite_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let mut res = TermVec::new();
     for (x, y) in terms[1].iter().zip(terms[2].iter()) {
@@ -95,9 +98,9 @@ fn add_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let mut res = TermVec::new();
     for (x, y) in terms[0].iter().zip(terms[1].iter()) {
         res.push(tm.new_op_terms_fold(Xor, [x, y, &c]));
-        let xy = tm.new_op_term(And, [x, y]);
-        let xc = tm.new_op_term(And, [y, &c]);
-        let yc = tm.new_op_term(And, [x, &c]);
+        let xy = x & y;
+        let xc = x & &c;
+        let yc = y & &c;
         c = tm.new_op_terms_fold(Or, [&xy, &xc, &yc]);
     }
     res
