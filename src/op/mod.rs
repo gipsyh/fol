@@ -143,7 +143,6 @@ impl From<&str> for DynOp {
 }
 
 // pub enum UniOpType {
-//     Redand,
 //     Redxor,
 // }
 
@@ -152,7 +151,6 @@ impl From<&str> for DynOp {
 //     Implies,
 //     Sgt,
 //     Sgte,
-//     Slt,
 //     Slte,
 //     Nand,
 //     Nor,

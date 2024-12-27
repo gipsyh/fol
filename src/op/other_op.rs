@@ -1,5 +1,5 @@
 use super::define::define_non_core_op;
-use super::{Concat, Eq, Ult};
+use super::{Concat, Eq, Ult, Xor};
 use crate::{Term, TermManager};
 
 define_non_core_op!(Neg, 1, neg_normalize);
@@ -18,15 +18,26 @@ fn dec_normalize(_tm: &mut TermManager, terms: &[Term]) -> Term {
     &terms[0] - terms[0].bv_const_one()
 }
 
-define_non_core_op!(Neq, 2, neq_normalize);
-fn neq_normalize(tm: &mut TermManager, terms: &[Term]) -> Term {
-    !tm.new_op_term(Eq, terms)
+define_non_core_op!(Redand, 1, redand_normalize);
+fn redand_normalize(_tm: &mut TermManager, terms: &[Term]) -> Term {
+    let ones = terms[0].bv_const_ones();
+    terms[0].op1(Eq, &ones)
 }
 
 define_non_core_op!(Redor, 1, redor_normalize);
 fn redor_normalize(_tm: &mut TermManager, terms: &[Term]) -> Term {
     let zero = terms[0].bv_const_zero();
     terms[0].op1(Neq, &zero)
+}
+
+define_non_core_op!(Neq, 2, neq_normalize);
+fn neq_normalize(tm: &mut TermManager, terms: &[Term]) -> Term {
+    !tm.new_op_term(Eq, terms)
+}
+
+define_non_core_op!(Xnor, 2, xnor_normalize);
+fn xnor_normalize(tm: &mut TermManager, terms: &[Term]) -> Term {
+    !tm.new_op_term(Xor, terms)
 }
 
 define_non_core_op!(Uext, 2, uext_normalize);
