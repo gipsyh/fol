@@ -8,8 +8,8 @@ fn bool_sort(_terms: &[Term]) -> Sort {
 }
 
 define_core_op!(Not, 1, bitblast: not_bitblast, cnf_encode: not_cnf_encode);
-fn not_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
-    terms[0].iter().map(|t| tm.new_op_term(Not, [t])).collect()
+fn not_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+    terms[0].iter().map(|t| !t).collect()
 }
 fn not_cnf_encode(_dc: &mut DagCnf, terms: &[Lit]) -> Lit {
     !terms[0]
@@ -66,10 +66,10 @@ fn ult_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
 }
 
 define_core_op!(Ite, 3, sort: bool_sort, bitblast: ite_bitblast, cnf_encode: ite_cnf_encode);
-fn ite_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+fn ite_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let mut res = TermVec::new();
     for (x, y) in terms[1].iter().zip(terms[2].iter()) {
-        res.push(tm.new_op_term(Ite, [&terms[0][0], x, y]));
+        res.push(terms[0][0].op2(Ite, x, y));
     }
     res
 }

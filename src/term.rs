@@ -5,7 +5,6 @@ use giputils::grc::Grc;
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
 use std::hash;
-use std::ops;
 use std::ops::DerefMut;
 use std::{hash::Hash, ops::Deref};
 
@@ -125,41 +124,30 @@ impl Drop for Term {
     }
 }
 
-impl ops::Not for Term {
-    type Output = Term;
+macro_rules! impl_unary_ops {
+    ($trait:ident, $method:ident, $op:expr) => {
+        impl std::ops::$trait for Term {
+            type Output = Term;
 
-    #[inline]
-    fn not(self) -> Self::Output {
-        self.op0(Not)
-    }
+            #[inline]
+            fn $method(self) -> Self::Output {
+                self.op0($op)
+            }
+        }
+
+        impl std::ops::$trait for &Term {
+            type Output = Term;
+
+            #[inline]
+            fn $method(self) -> Self::Output {
+                self.op0($op)
+            }
+        }
+    };
 }
 
-impl ops::Not for &Term {
-    type Output = Term;
-
-    #[inline]
-    fn not(self) -> Self::Output {
-        self.op0(Not)
-    }
-}
-
-impl ops::Neg for Term {
-    type Output = Term;
-
-    #[inline]
-    fn neg(self) -> Self::Output {
-        self.op0(Neg)
-    }
-}
-
-impl ops::Neg for &Term {
-    type Output = Term;
-
-    #[inline]
-    fn neg(self) -> Self::Output {
-        self.op0(Neg)
-    }
-}
+impl_unary_ops!(Not, not, Not);
+impl_unary_ops!(Neg, neg, Neg);
 
 macro_rules! impl_biops {
     ($trait:ident, $method:ident, $op:expr) => {
