@@ -81,6 +81,40 @@ fn slt_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     TermVec::from([ls | (eqs & el)])
 }
 
+define_core_op!(Sll, 2, bitblast: sll_bitblast);
+fn sll_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+    let (x, y) = (&terms[0], &terms[1]);
+    assert!(x.len() == y.len());
+    if terms[0].len() == 1 {
+        return TermVec::from([&x[0] & !&y[0]]);
+    }
+    let width = x.len();
+    let mut pow2 = 1;
+    let mut shift_size = 0;
+    while pow2 < width {
+        pow2 *= 2;
+        shift_size += 1;
+    }
+    let mut res = x.clone();
+    for shift_bit in 0..shift_size {
+        let shift_step = 1 << shift_bit;
+        let not_shift = !&y[shift_bit];
+        for j in 0..width - shift_step {
+            res[j] = &not_shift & &res[j];
+        }
+        for j in width - shift_step..width {
+            res[j] = tm.new_op_term(Ite, [&y[shift_bit], &res[j + shift_step], &res[j]]);
+        }
+    }
+    todo!()
+    // res
+}
+
+define_core_op!(Srl, 2, bitblast: srl_bitblast);
+fn srl_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+    todo!()
+}
+
 define_core_op!(Ite, 3, sort: ite_sort, bitblast: ite_bitblast, cnf_encode: ite_cnf_encode);
 fn ite_sort(terms: &[Term]) -> Sort {
     terms[1].sort()

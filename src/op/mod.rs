@@ -159,7 +159,6 @@ impl From<&str> for DynOp {
 //     Sll,
 //     Sra,
 //     Srl,
-//     Add,
 //     Mul,
 //     Sdiv,
 //     Udiv,
