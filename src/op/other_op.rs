@@ -31,9 +31,9 @@ fn ugte_normalize(tm: &mut TermManager, terms: &[Term]) -> Term {
     !tm.new_op_term(Ult, terms)
 }
 
+define_non_core_op!(Sub, 2, sub_normalize);
+fn sub_normalize(_tm: &mut TermManager, terms: &[Term]) -> Term {
+    &terms[0] + -&terms[1]
+}
+
 // define_op!(Inc, 1, todo_bitblast);
-
-// define_op!(Sub, 2, sub_normalize);
-// fn sub_normalize(tm: &mut TermManager, terms: &[Term]) -> Term {
-
-// }
