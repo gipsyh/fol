@@ -1,6 +1,6 @@
 use super::{op::DynOp, sort::Sort};
 use crate::TermVec;
-use crate::op::{And, Not, Or};
+use crate::op::{Add, And, Neg, Not, Or, Xor};
 use giputils::grc::Grc;
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
@@ -24,6 +24,29 @@ impl Term {
     #[inline]
     pub fn sort(&self) -> Sort {
         self.inner.sort()
+    }
+
+    #[inline]
+    pub fn bv_len(&self) -> usize {
+        self.sort().bv_len()
+    }
+
+    #[inline]
+    pub fn bv_const_zero(&self) -> Term {
+        let mut tm = self.get_manager();
+        tm.bv_const_zero(self.bv_len())
+    }
+
+    #[inline]
+    pub fn bv_const_one(&self) -> Term {
+        let mut tm = self.get_manager();
+        tm.bv_const_one(self.bv_len())
+    }
+
+    #[inline]
+    pub fn bv_const_ones(&self) -> Term {
+        let mut tm = self.get_manager();
+        tm.bv_const_ones(self.bv_len())
     }
 
     #[inline]
@@ -120,41 +143,50 @@ impl ops::Not for &Term {
     }
 }
 
-impl<T: AsRef<Term>> ops::BitAnd<T> for Term {
+impl ops::Neg for Term {
     type Output = Term;
 
     #[inline]
-    fn bitand(self, rhs: T) -> Self::Output {
-        self.op1(And, rhs.as_ref())
+    fn neg(self) -> Self::Output {
+        self.op0(Neg)
     }
 }
 
-impl<T: AsRef<Term>> ops::BitAnd<T> for &Term {
+impl ops::Neg for &Term {
     type Output = Term;
 
     #[inline]
-    fn bitand(self, rhs: T) -> Self::Output {
-        self.op1(And, rhs.as_ref())
+    fn neg(self) -> Self::Output {
+        self.op0(Neg)
     }
 }
 
-impl<T: AsRef<Term>> ops::BitOr<T> for Term {
-    type Output = Term;
+macro_rules! impl_biops {
+    ($trait:ident, $method:ident, $op:expr) => {
+        impl<T: AsRef<Term>> std::ops::$trait<T> for Term {
+            type Output = Term;
 
-    #[inline]
-    fn bitor(self, rhs: T) -> Self::Output {
-        self.op1(Or, rhs.as_ref())
-    }
+            #[inline]
+            fn $method(self, rhs: T) -> Self::Output {
+                self.op1($op, rhs.as_ref())
+            }
+        }
+
+        impl<T: AsRef<Term>> std::ops::$trait<T> for &Term {
+            type Output = Term;
+
+            #[inline]
+            fn $method(self, rhs: T) -> Self::Output {
+                self.op1($op, rhs.as_ref())
+            }
+        }
+    };
 }
 
-impl<T: AsRef<Term>> ops::BitOr<T> for &Term {
-    type Output = Term;
-
-    #[inline]
-    fn bitor(self, rhs: T) -> Self::Output {
-        self.op1(Or, rhs.as_ref())
-    }
-}
+impl_biops!(BitAnd, bitand, And);
+impl_biops!(BitOr, bitor, Or);
+impl_biops!(BitXor, bitxor, Xor);
+impl_biops!(Add, add, Add);
 
 pub struct TermInner {
     sort: Sort,

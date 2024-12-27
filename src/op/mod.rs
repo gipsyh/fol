@@ -135,7 +135,10 @@ lazy_static! {
 impl From<&str> for DynOp {
     #[inline]
     fn from(value: &str) -> Self {
-        OP_MAP.get(&value.to_lowercase()).unwrap().clone()
+        OP_MAP
+            .get(&value.to_lowercase())
+            .unwrap_or_else(|| panic!("unsupport {value} op!"))
+            .clone()
     }
 }
 

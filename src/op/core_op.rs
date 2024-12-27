@@ -81,7 +81,7 @@ fn ite_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
 
 define_core_op!(Concat, 2, sort: concat_sort, bitblast: concat_bitblast);
 fn concat_sort(terms: &[Term]) -> Sort {
-    Sort::Bv(terms[0].sort().bv_len() + terms[1].sort().bv_len())
+    Sort::Bv(terms[0].bv_len() + terms[1].bv_len())
 }
 fn concat_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let mut res = terms[1].clone();
