@@ -142,29 +142,18 @@ impl From<&str> for DynOp {
     }
 }
 
-// #[derive(Debug, Copy, Clone, strum::EnumString, strum::Display, PartialEq, Eq, Hash)]
-// #[strum(serialize_all = "lowercase")]
 // pub enum UniOpType {
-//     Dec,
-//     Neg,
 //     Redand,
-//     Redor,
 //     Redxor,
 // }
 
-// #[derive(Debug, Copy, Clone, strum::EnumString, strum::Display, PartialEq, Eq, Hash)]
-// #[strum(serialize_all = "lowercase")]
 // pub enum BiOpType {
 //     Iff,
 //     Implies,
 //     Sgt,
-//     Ugt,
 //     Sgte,
 //     Slt,
-//     Ult,
 //     Slte,
-//     Ulte,
-//     And,
 //     Nand,
 //     Nor,
 //     Rol,
@@ -200,12 +189,4 @@ impl From<&str> for DynOp {
 // #[strum(serialize_all = "lowercase")]
 // pub enum ExtOpType {
 //     Sext,
-//     Uext,
-// }
-
-// #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-// pub struct SliceOp {
-//     pub a: Term,
-//     pub upper: u32,
-//     pub lower: u32,
 // }

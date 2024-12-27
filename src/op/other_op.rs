@@ -8,6 +8,16 @@ fn neg_normalize(_tm: &mut TermManager, terms: &[Term]) -> Term {
     !term + term.bv_const_one()
 }
 
+define_non_core_op!(Inc, 1, inc_normalize);
+fn inc_normalize(_tm: &mut TermManager, terms: &[Term]) -> Term {
+    &terms[0] + terms[0].bv_const_one()
+}
+
+define_non_core_op!(Dec, 1, dec_normalize);
+fn dec_normalize(_tm: &mut TermManager, terms: &[Term]) -> Term {
+    &terms[0] - terms[0].bv_const_one()
+}
+
 define_non_core_op!(Neq, 2, neq_normalize);
 fn neq_normalize(tm: &mut TermManager, terms: &[Term]) -> Term {
     !tm.new_op_term(Eq, terms)
@@ -43,5 +53,3 @@ define_non_core_op!(Sub, 2, sub_normalize);
 fn sub_normalize(_tm: &mut TermManager, terms: &[Term]) -> Term {
     &terms[0] + -&terms[1]
 }
-
-// define_op!(Inc, 1, todo_bitblast);

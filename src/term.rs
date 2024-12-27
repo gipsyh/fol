@@ -1,6 +1,6 @@
 use super::{op::DynOp, sort::Sort};
 use crate::TermVec;
-use crate::op::{Add, And, Neg, Not, Or, Xor};
+use crate::op::{Add, And, Neg, Not, Or, Sub, Xor};
 use giputils::grc::Grc;
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
@@ -175,6 +175,7 @@ impl_biops!(BitAnd, bitand, And);
 impl_biops!(BitOr, bitor, Or);
 impl_biops!(BitXor, bitxor, Xor);
 impl_biops!(Add, add, Add);
+impl_biops!(Sub, sub, Sub);
 
 pub struct TermInner {
     sort: Sort,

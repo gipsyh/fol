@@ -1,3 +1,5 @@
+#![feature(new_range_api)]
+
 pub mod bitblast;
 pub mod op;
 mod sort;

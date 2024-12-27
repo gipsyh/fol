@@ -65,6 +65,22 @@ fn ult_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     TermVec::from([res])
 }
 
+define_core_op!(Slt, 2, sort: bool_sort, bitblast: slt_bitblast);
+fn slt_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+    let x = &terms[0];
+    let y = &terms[0];
+    let len = x.len();
+    let (xr, xs) = (&x[..len - 1], &x[len - 1]);
+    let (yr, ys) = (&y[..len - 1], &y[len - 1]);
+    let ls = xs & !ys;
+    let eqs = xs.op1(Eq, ys);
+    let mut el = tm.bool_const(false);
+    for (x, y) in xr.iter().zip(yr.iter()) {
+        el = (!x & y) | ((!x | y) & el)
+    }
+    TermVec::from([ls | (eqs & el)])
+}
+
 define_core_op!(Ite, 3, sort: ite_sort, bitblast: ite_bitblast, cnf_encode: ite_cnf_encode);
 fn ite_sort(terms: &[Term]) -> Sort {
     terms[1].sort()
@@ -99,7 +115,7 @@ fn slice_sort(terms: &[Term]) -> Sort {
 fn slice_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let l = terms[2].len();
     let h = terms[1].len();
-    terms[0].get(l..=h).unwrap().iter().cloned().collect()
+    terms[0][l..=h].iter().cloned().collect()
 }
 
 define_core_op!(Add, 2, bitblast: add_bitblast);

@@ -1,6 +1,7 @@
 use crate::{Term, TermManager, op::DynOp};
+use core::range::Range;
 use std::{
-    ops::{Deref, DerefMut, Index, IndexMut},
+    ops::{Deref, DerefMut, Index, IndexMut, RangeInclusive, RangeTo},
     slice, vec,
 };
 
@@ -80,6 +81,33 @@ impl IndexMut<usize> for TermVec {
     #[inline]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.data[index]
+    }
+}
+
+impl Index<Range<usize>> for TermVec {
+    type Output = [Term];
+
+    #[inline]
+    fn index(&self, index: Range<usize>) -> &Self::Output {
+        self.data.index(index)
+    }
+}
+
+impl Index<RangeTo<usize>> for TermVec {
+    type Output = [Term];
+
+    #[inline]
+    fn index(&self, index: RangeTo<usize>) -> &Self::Output {
+        self.data.index(index)
+    }
+}
+
+impl Index<RangeInclusive<usize>> for TermVec {
+    type Output = [Term];
+
+    #[inline]
+    fn index(&self, index: RangeInclusive<usize>) -> &Self::Output {
+        self.data.index(index)
     }
 }
 
