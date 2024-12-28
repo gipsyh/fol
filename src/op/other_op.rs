@@ -35,6 +35,11 @@ fn neq_normalize(tm: &mut TermManager, terms: &[Term]) -> Term {
     !tm.new_op_term(Eq, terms)
 }
 
+define_non_core_op!(Implies, 2, implies_normalize);
+fn implies_normalize(_tm: &mut TermManager, terms: &[Term]) -> Term {
+    !&terms[0] | &terms[1]
+}
+
 define_non_core_op!(Xnor, 2, xnor_normalize);
 fn xnor_normalize(tm: &mut TermManager, terms: &[Term]) -> Term {
     !tm.new_op_term(Xor, terms)
