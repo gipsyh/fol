@@ -151,6 +151,36 @@ fn srl_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     res
 }
 
+define_core_op!(Sra, 2, bitblast: sra_bitblast);
+fn sra_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+    let (x, y) = (&terms[0], &terms[1]);
+    assert!(x.len() == y.len());
+    if terms[0].len() == 1 {
+        return x.clone();
+    }
+    let width = x.len();
+    let shift_size = get_shift_size(width);
+    let mut res = x.clone();
+    for shift_bit in 0..shift_size {
+        let shift_step = 1 << shift_bit;
+        let shift = &y[shift_bit];
+        for j in 0..width - shift_step {
+            res[j] = tm.new_op_term(Ite, [shift, &res[j + shift_step], &res[j]]);
+        }
+        for j in width - shift_step..width {
+            res[j] = tm.new_op_term(Ite, [shift, &res[width - 1], &res[j]]);
+        }
+    }
+    let width_bv = tm.bv_const_from_usize(width, width).bv_const();
+    let width_bv = width_bv.bitblast(tm);
+    let less = &ult_bitblast(tm, &[terms[1].clone(), width_bv])[0];
+    let sign = &x[width - 1];
+    for r in res.iter_mut() {
+        *r = tm.new_op_term(Ite, [less, r, &sign]);
+    }
+    res
+}
+
 define_core_op!(Ite, 3, sort: ite_sort, bitblast: ite_bitblast, cnf_encode: ite_cnf_encode);
 fn ite_sort(terms: &[Term]) -> Sort {
     terms[1].sort()

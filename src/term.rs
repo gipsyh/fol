@@ -26,6 +26,15 @@ impl Term {
     }
 
     #[inline]
+    pub fn op_term(&self) -> Option<&OpTerm> {
+        if let TermType::Op(op) = self.deref() {
+            Some(op)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
     pub fn bv_len(&self) -> usize {
         self.sort().bv_len()
     }
