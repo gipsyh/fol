@@ -1,6 +1,6 @@
 use super::{op::DynOp, sort::Sort};
 use crate::TermVec;
-use crate::op::{Add, And, Neg, Not, Or, Sub, Xor};
+use crate::op::{Add, And, Ite, Neg, Not, Or, Sub, Xor};
 use giputils::grc::Grc;
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
@@ -40,27 +40,27 @@ impl Term {
     }
 
     #[inline]
-    pub fn bv_const(&self) -> BvConst {
+    pub fn bv_const(&self) -> Option<&BvConst> {
         match self.deref() {
-            TermType::Const(ConstTerm::BV(c)) => c.clone(),
-            _ => panic!(),
+            TermType::Const(ConstTerm::BV(c)) => Some(c),
+            _ => None,
         }
     }
 
     #[inline]
-    pub fn bv_const_zero(&self) -> Term {
+    pub fn mk_bv_const_zero(&self) -> Term {
         let mut tm = self.get_manager();
         tm.bv_const_zero(self.bv_len())
     }
 
     #[inline]
-    pub fn bv_const_one(&self) -> Term {
+    pub fn mk_bv_const_one(&self) -> Term {
         let mut tm = self.get_manager();
         tm.bv_const_one(self.bv_len())
     }
 
     #[inline]
-    pub fn bv_const_ones(&self) -> Term {
+    pub fn mk_bv_const_ones(&self) -> Term {
         let mut tm = self.get_manager();
         tm.bv_const_ones(self.bv_len())
     }
@@ -91,6 +91,11 @@ impl Term {
     pub fn op2(&self, op: impl Into<DynOp>, x: &Term, y: &Term) -> Term {
         let mut tm = self.get_manager();
         tm.new_op_term(op.into(), [self, x, y])
+    }
+
+    #[inline]
+    pub fn ite(&self, t: &Term, e: &Term) -> Term {
+        self.op2(Ite, t, e)
     }
 }
 
@@ -243,6 +248,14 @@ impl BvConst {
     #[inline]
     pub fn bv_len(&self) -> usize {
         self.c.len()
+    }
+
+    pub fn bool(&self) -> Option<bool> {
+        if self.c.len() == 1 {
+            Some(self.c[0])
+        } else {
+            None
+        }
     }
 }
 

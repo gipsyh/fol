@@ -111,7 +111,11 @@ fn sll_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
             res[j] = tm.new_op_term(Ite, [shift, &res[j - shift_step], &res[j]]);
         }
     }
-    let width_bv = tm.bv_const_from_usize(width, width).bv_const();
+    let width_bv = tm
+        .bv_const_from_usize(width, width)
+        .bv_const()
+        .unwrap()
+        .clone();
     let width_bv = width_bv.bitblast(tm);
     let less = &ult_bitblast(tm, &[terms[1].clone(), width_bv])[0];
     let f = tm.bool_const(false);
@@ -141,7 +145,11 @@ fn srl_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
             res[j] = &!shift & &res[j];
         }
     }
-    let width_bv = tm.bv_const_from_usize(width, width).bv_const();
+    let width_bv = tm
+        .bv_const_from_usize(width, width)
+        .bv_const()
+        .unwrap()
+        .clone();
     let width_bv = width_bv.bitblast(tm);
     let less = &ult_bitblast(tm, &[terms[1].clone(), width_bv])[0];
     let f = tm.bool_const(false);
@@ -171,7 +179,11 @@ fn sra_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
             res[j] = tm.new_op_term(Ite, [shift, &res[width - 1], &res[j]]);
         }
     }
-    let width_bv = tm.bv_const_from_usize(width, width).bv_const();
+    let width_bv = tm
+        .bv_const_from_usize(width, width)
+        .bv_const()
+        .unwrap()
+        .clone();
     let width_bv = width_bv.bitblast(tm);
     let less = &ult_bitblast(tm, &[terms[1].clone(), width_bv])[0];
     let sign = &x[width - 1];
@@ -208,6 +220,18 @@ fn concat_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     res
 }
 
+define_core_op!(Sext, 2, sort: sext_sort, bitblast: sext_bitblast);
+fn sext_sort(terms: &[Term]) -> Sort {
+    Sort::Bv(terms[0].bv_len() + terms[1].bv_len())
+}
+fn sext_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+    let x = &terms[0];
+    let mut res = x.clone();
+    let ext = vec![x[x.len() - 1].clone(); terms[1].len()];
+    res.extend(ext);
+    res
+}
+
 define_core_op!(Slice, 3, sort: slice_sort, bitblast: slice_bitblast);
 fn slice_sort(terms: &[Term]) -> Sort {
     Sort::Bv(terms[1].bv_len() - terms[2].bv_len() + 1)
@@ -218,16 +242,46 @@ fn slice_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     terms[0][l..=h].iter().cloned().collect()
 }
 
+define_core_op!(Redxor, 1, sort: bool_sort, bitblast: redxor_bitblast);
+fn redxor_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+    TermVec::from([tm.new_op_terms_fold(Xor, terms[0].iter())])
+}
+
+#[inline]
+fn full_adder(tm: &mut TermManager, x: &Term, y: &Term, c: &Term) -> (Term, Term) {
+    let r = tm.new_op_terms_fold(Xor, [x, y, c]);
+    let xy = x & y;
+    let xc = x & c;
+    let yc = y & c;
+    let c = tm.new_op_terms_fold(Or, [&xy, &xc, &yc]);
+    (r, c)
+}
+
 define_core_op!(Add, 2, bitblast: add_bitblast);
 fn add_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+    let mut r;
     let mut c = tm.bool_const(false);
     let mut res = TermVec::new();
     for (x, y) in terms[0].iter().zip(terms[1].iter()) {
-        res.push(tm.new_op_terms_fold(Xor, [x, y, &c]));
-        let xy = x & y;
-        let xc = x & &c;
-        let yc = y & &c;
-        c = tm.new_op_terms_fold(Or, [&xy, &xc, &yc]);
+        (r, c) = full_adder(tm, x, y, &c);
+        res.push(r);
+    }
+    res
+}
+
+define_core_op!(Mul, 2, bitblast: mul_bitblast);
+fn mul_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+    let x = &terms[0];
+    let y = &terms[1];
+    assert!(x.len() == y.len());
+    let len = x.len();
+    let mut res: TermVec = x.iter().map(|t| t & &y[0]).collect();
+    for i in 1..len {
+        let mut c = tm.bool_const(false);
+        for j in i..len {
+            let add = &y[i] & &x[j - i];
+            (res[j], c) = full_adder(tm, &res[j], &add, &c);
+        }
     }
     res
 }
