@@ -81,6 +81,16 @@ fn slt_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     TermVec::from([ls | (eqs & el)])
 }
 
+fn get_shift_size(x: usize) -> usize {
+    let mut pow2 = 1;
+    let mut res = 0;
+    while pow2 < x {
+        pow2 *= 2;
+        res += 1;
+    }
+    res
+}
+
 define_core_op!(Sll, 2, bitblast: sll_bitblast);
 fn sll_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let (x, y) = (&terms[0], &terms[1]);
@@ -89,30 +99,56 @@ fn sll_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
         return TermVec::from([&x[0] & !&y[0]]);
     }
     let width = x.len();
-    let mut pow2 = 1;
-    let mut shift_size = 0;
-    while pow2 < width {
-        pow2 *= 2;
-        shift_size += 1;
-    }
+    let shift_size = get_shift_size(width);
     let mut res = x.clone();
     for shift_bit in 0..shift_size {
         let shift_step = 1 << shift_bit;
-        let not_shift = !&y[shift_bit];
-        for j in 0..width - shift_step {
-            res[j] = &not_shift & &res[j];
+        let shift = &y[shift_bit];
+        for j in 0..shift_step {
+            res[j] = &!shift & &res[j];
         }
-        for j in width - shift_step..width {
-            res[j] = tm.new_op_term(Ite, [&y[shift_bit], &res[j + shift_step], &res[j]]);
+        for j in shift_step..width {
+            res[j] = tm.new_op_term(Ite, [shift, &res[j - shift_step], &res[j]]);
         }
     }
-    todo!()
-    // res
+    let width_bv = tm.bv_const_from_usize(width, width).bv_const();
+    let width_bv = width_bv.bitblast(tm);
+    let less = &ult_bitblast(tm, &[terms[1].clone(), width_bv])[0];
+    let f = tm.bool_const(false);
+    for r in res.iter_mut() {
+        *r = tm.new_op_term(Ite, [less, r, &f]);
+    }
+    res
 }
 
 define_core_op!(Srl, 2, bitblast: srl_bitblast);
 fn srl_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
-    todo!()
+    let (x, y) = (&terms[0], &terms[1]);
+    assert!(x.len() == y.len());
+    if terms[0].len() == 1 {
+        return TermVec::from([&x[0] & !&y[0]]);
+    }
+    let width = x.len();
+    let shift_size = get_shift_size(width);
+    let mut res = x.clone();
+    for shift_bit in 0..shift_size {
+        let shift_step = 1 << shift_bit;
+        let shift = &y[shift_bit];
+        for j in 0..width - shift_step {
+            res[j] = tm.new_op_term(Ite, [shift, &res[j + shift_step], &res[j]]);
+        }
+        for j in width - shift_step..width {
+            res[j] = &!shift & &res[j];
+        }
+    }
+    let width_bv = tm.bv_const_from_usize(width, width).bv_const();
+    let width_bv = width_bv.bitblast(tm);
+    let less = &ult_bitblast(tm, &[terms[1].clone(), width_bv])[0];
+    let f = tm.bool_const(false);
+    for r in res.iter_mut() {
+        *r = tm.new_op_term(Ite, [less, r, &f]);
+    }
+    res
 }
 
 define_core_op!(Ite, 3, sort: ite_sort, bitblast: ite_bitblast, cnf_encode: ite_cnf_encode);

@@ -31,6 +31,14 @@ impl Term {
     }
 
     #[inline]
+    pub fn bv_const(&self) -> BvConst {
+        match self.deref() {
+            TermType::Const(ConstTerm::BV(c)) => c.clone(),
+            _ => panic!(),
+        }
+    }
+
+    #[inline]
     pub fn bv_const_zero(&self) -> Term {
         let mut tm = self.get_manager();
         tm.bv_const_zero(self.bv_len())
@@ -343,6 +351,20 @@ impl TermManager {
         let c = vec![true; len];
         let term = TermType::Const(ConstTerm::BV(BvConst::new(&c)));
         self.new_term(term, Sort::Bv(len))
+    }
+
+    #[inline]
+    pub fn bv_const_from_usize(&mut self, mut v: usize, width: usize) -> Term {
+        let mut bv = Vec::new();
+        while v > 0 {
+            bv.push(width & 1 == 1);
+            v = v >> 1;
+        }
+        while bv.len() < width {
+            bv.push(false);
+        }
+        bv.truncate(width);
+        self.bv_const(&bv)
     }
 
     #[inline]
