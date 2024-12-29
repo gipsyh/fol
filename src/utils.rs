@@ -1,7 +1,6 @@
 use crate::{Term, TermManager, op::DynOp};
-use core::range::Range;
 use std::{
-    ops::{Deref, DerefMut, Index, IndexMut, RangeInclusive, RangeTo},
+    ops::{Deref, DerefMut, Index, IndexMut, Range, RangeInclusive, RangeTo},
     slice, vec,
 };
 
@@ -140,11 +139,27 @@ impl<'a> IntoIterator for &'a TermVec {
     }
 }
 
+impl From<&[Term]> for TermVec {
+    #[inline]
+    fn from(value: &[Term]) -> Self {
+        Self {
+            data: Vec::from(value),
+        }
+    }
+}
+
 impl<const N: usize> From<[Term; N]> for TermVec {
     #[inline]
     fn from(value: [Term; N]) -> Self {
         Self {
             data: Vec::from(value),
         }
+    }
+}
+
+impl From<Vec<Term>> for TermVec {
+    #[inline]
+    fn from(value: Vec<Term>) -> Self {
+        Self { data: value }
     }
 }

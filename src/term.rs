@@ -26,6 +26,11 @@ impl Term {
     }
 
     #[inline]
+    pub fn is_bool(&self) -> bool {
+        self.sort().is_bool()
+    }
+
+    #[inline]
     pub fn op_term(&self) -> Option<&OpTerm> {
         if let TermType::Op(op) = self.deref() {
             Some(op)
@@ -36,7 +41,7 @@ impl Term {
 
     #[inline]
     pub fn bv_len(&self) -> usize {
-        self.sort().bv_len()
+        self.sort().bv()
     }
 
     #[inline]
@@ -399,7 +404,7 @@ impl TermManager {
     }
 
     #[inline]
-    pub fn mk_bv_const(&mut self, c: BvConst) -> Term {
+    pub fn bv_const(&mut self, c: BvConst) -> Term {
         let sort = Sort::Bv(c.len());
         let term = TermType::Const(ConstTerm::BV(c));
         self.new_term(term, sort)
@@ -438,7 +443,7 @@ impl TermManager {
             bv.push(false);
         }
         bv.truncate(width);
-        self.mk_bv_const(BvConst::new(&bv))
+        self.bv_const(BvConst::new(&bv))
     }
 
     #[inline]

@@ -8,13 +8,27 @@ pub enum Sort {
 
 impl Sort {
     #[inline]
-    pub fn bool_sort() -> Self {
+    pub fn bool() -> Self {
         Sort::Bv(1)
     }
 
     #[inline]
-    pub fn bv_len(&self) -> usize {
+    pub fn is_bool(&self) -> bool {
+        matches!(self, Self::Bv(1))
+    }
+
+    #[inline]
+    pub fn bv(&self) -> usize {
         if let Sort::Bv(w) = self { *w } else { panic!() }
+    }
+
+    #[inline]
+    pub fn array(&self) -> (usize, usize) {
+        if let Sort::Array(i, e) = self {
+            (*i, *e)
+        } else {
+            panic!()
+        }
     }
 }
 

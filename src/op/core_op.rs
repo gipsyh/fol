@@ -1,3 +1,5 @@
+use core::range::Range;
+
 use super::define::define_core_op;
 use crate::{BvConst, Sort, Term, TermManager, TermResult, TermVec};
 use logic_form::{DagCnf, Lit};
@@ -18,7 +20,7 @@ fn not_simplify(tm: &mut TermManager, terms: &[Term]) -> TermResult {
     }
     if let Some(xc) = x.bv_const() {
         dbg!("not2");
-        return TermResult::Some(tm.mk_bv_const(!xc));
+        return TermResult::Some(tm.bv_const(!xc));
     }
     TermResult::None
 }
@@ -145,7 +147,7 @@ fn eq_simplify(tm: &mut TermManager, terms: &[Term]) -> TermResult {
     let x = &terms[0];
     let y = &terms[1];
     let mut simp = |a: &Term, b: &Term| {
-        if a.bv_len() == 1 {
+        if a.is_bool() {
             if let TermResult::Some(s) = xor_simplify(tm, terms) {
                 dbg!("eq1");
                 return TermResult::Some(!s);
@@ -329,7 +331,7 @@ fn ite_simplify(_tm: &mut TermManager, terms: &[Term]) -> TermResult {
         dbg!("ite2");
         return TermResult::Some(t.clone());
     }
-    if t.bv_len() == 1 {
+    if t.is_bool() {
         if let Some(ec) = e.bv_const() {
             if ec.is_zero() {
                 dbg!("ite3");
@@ -373,7 +375,7 @@ fn concat_simplify(tm: &mut TermManager, terms: &[Term]) -> TermResult {
     if let (Some(xc), Some(yc)) = (x.bv_const(), y.bv_const()) {
         let mut c = yc.c.clone();
         c.extend_from_slice(&xc.c);
-        return TermResult::Some(tm.mk_bv_const(BvConst::new(&c)));
+        return TermResult::Some(tm.bv_const(BvConst::new(&c)));
     }
     TermResult::None
 }
@@ -450,4 +452,63 @@ fn mul_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
         }
     }
     res
+}
+
+define_core_op!(Read, 2, sort: read_sort, bitblast: read_bitblast);
+fn read_sort(terms: &[Term]) -> Sort {
+    let (_, e) = terms[0].sort().array();
+    Sort::Bv(e)
+}
+
+fn onehot_encode(tm: &mut TermManager, x: &[Term]) -> TermVec {
+    let len = 1_usize.checked_shl(x.len() as u32).unwrap();
+    let mut res = vec![tm.bool_const(false); len];
+    res[1] = tm.bool_const(true);
+    for sb in 0..x.len() {
+        let ss = 1 << sb;
+        let shift = &x[sb];
+        for j in 0..ss {
+            res[j] = &!shift & &res[j];
+        }
+        for j in ss..len {
+            res[j] = tm.new_op_term(Ite, [shift, &res[j - ss], &res[j]]);
+        }
+    }
+    TermVec::from(res.as_slice())
+}
+
+fn read_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+    let (array, index) = (&terms[0], &terms[1]);
+    let index_len = index.len();
+    let array_len = array.len();
+    let index_range = 1_usize.checked_shl(index_len as u32).unwrap();
+    let element_len = array_len / index_range;
+    dbg!(index_len);
+    dbg!(array_len);
+    dbg!(element_len);
+    let ia = |x: usize, y: usize| &array[element_len * x + y];
+    let onehot = onehot_encode(tm, &index);
+    let mut res = TermVec::new();
+    for i in 0..element_len {
+        let mut r = tm.bool_const(false);
+        for j in 0..index_range {
+            r = onehot[j].ite(ia(j, i), &r);
+        }
+        res.push(r);
+    }
+    res
+}
+
+define_core_op!(Write, 3, bitblast: write_bitblast);
+fn write_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
+    // let (array, index) = (&terms[0], &terms[1]);
+    // let index_len = index.len();
+    // let array_len = array.len();
+    // let element_len = array_len / (1 << index_len);
+    // dbg!(index_len);
+    // dbg!(array_len);
+    // dbg!(element_len);
+    // for i in index.iter() {}
+    todo!();
+    todo!()
 }

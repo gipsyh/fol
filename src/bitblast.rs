@@ -34,8 +34,15 @@ impl ConstTerm {
 }
 
 pub fn var_bitblast(tm: &mut TermManager, sort: Sort) -> TermVec {
-    repeat_with(|| tm.new_var(Sort::bool_sort()))
-        .take(sort.bv_len())
+    let size = match sort {
+        Sort::Bv(s) => s,
+        Sort::Array(i, e) => {
+            let shifted = 1usize.checked_shl(i as u32).unwrap();
+            shifted.checked_mul(e).unwrap()
+        }
+    };
+    repeat_with(|| tm.new_var(Sort::bool()))
+        .take(size)
         .collect()
 }
 
