@@ -1,7 +1,8 @@
-#![feature(new_range_api)]
+#![feature(new_range_api, try_trait_v2)]
 
 pub mod bitblast;
 pub mod op;
+mod simplify;
 mod sort;
 mod term;
 mod utils;

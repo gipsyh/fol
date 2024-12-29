@@ -10,7 +10,7 @@ impl BvConst {
 
     #[inline]
     pub fn cnf_encode(&self) -> Lit {
-        debug_assert!(self.bv_len() == 1);
+        debug_assert!(self.len() == 1);
         Lit::constant(self.c[0])
     }
 }

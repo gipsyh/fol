@@ -13,6 +13,17 @@ macro_rules! op_trait_impl {
             $impl(tm, terms)
         }
     };
+    (simplify $impl:expr) => {
+        #[inline]
+        fn simplify(
+            &self,
+            tm: &mut crate::TermManager,
+            terms: &[crate::Term],
+        ) -> crate::TermResult {
+            debug_assert!(self.num_operand() == terms.len());
+            $impl(tm, terms)
+        }
+    };
     (bitblast $impl:expr) => {
         #[inline]
         fn bitblast(

@@ -47,7 +47,11 @@ fn xnor_normalize(tm: &mut TermManager, terms: &[Term]) -> Term {
 
 define_non_core_op!(Uext, 2, uext_normalize);
 fn uext_normalize(tm: &mut TermManager, terms: &[Term]) -> Term {
-    tm.new_op_term(Concat, &[terms[1].clone(), terms[0].clone()])
+    if terms[1].bv_len() == 0 {
+        terms[0].clone()
+    } else {
+        tm.new_op_term(Concat, &[terms[1].clone(), terms[0].clone()])
+    }
 }
 
 define_non_core_op!(Ugt, 2, ugt_normalize);

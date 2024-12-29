@@ -3,7 +3,7 @@ mod define;
 mod other_op;
 
 use super::term::Term;
-use crate::{Sort, TermManager, TermVec};
+use crate::{Sort, TermManager, TermResult, TermVec};
 pub use core_op::*;
 use lazy_static::lazy_static;
 use logic_form::{DagCnf, Lit};
@@ -44,6 +44,10 @@ pub trait Op: Debug + 'static {
 
     fn normalize(&self, _tm: &mut TermManager, _terms: &[Term]) -> Term {
         panic!("{:?} not support normalize", self);
+    }
+
+    fn simplify(&self, _tm: &mut TermManager, _terms: &[Term]) -> TermResult {
+        TermResult::None
     }
 
     fn bitblast(&self, _tm: &mut TermManager, _terms: &[TermVec]) -> TermVec {

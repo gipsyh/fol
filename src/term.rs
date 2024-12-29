@@ -4,8 +4,8 @@ use crate::op::{Add, And, Ite, Neg, Not, Or, Sub, Xor};
 use giputils::grc::Grc;
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
-use std::hash;
-use std::ops::DerefMut;
+use std::ops::{ControlFlow, DerefMut, FromResidual, Try};
+use std::{hash, ops};
 use std::{hash::Hash, ops::Deref};
 
 #[derive(Clone)]
@@ -246,7 +246,17 @@ impl BvConst {
     }
 
     #[inline]
-    pub fn bv_len(&self) -> usize {
+    pub fn is_zero(&self) -> bool {
+        self.c.iter().all(|x| !x)
+    }
+
+    #[inline]
+    pub fn is_ones(&self) -> bool {
+        self.c.iter().all(|x| *x)
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
         self.c.len()
     }
 
@@ -263,6 +273,16 @@ impl Debug for BvConst {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("BvConst").field(&self.c).finish()
+    }
+}
+
+impl ops::Not for &BvConst {
+    type Output = BvConst;
+
+    #[inline]
+    fn not(self) -> Self::Output {
+        let c = self.c.iter().map(|b| !b).collect();
+        BvConst { c }
     }
 }
 
@@ -289,6 +309,37 @@ impl OpTerm {
         Self {
             op: op.into(),
             terms: terms.to_vec(),
+        }
+    }
+}
+
+pub enum TermResult {
+    Some(Term),
+    None,
+}
+
+impl FromResidual for TermResult {
+    #[inline]
+    fn from_residual(residual: <Self as Try>::Residual) -> Self {
+        TermResult::Some(residual)
+    }
+}
+
+impl Try for TermResult {
+    type Output = ();
+
+    type Residual = Term;
+
+    #[inline]
+    fn from_output(_: Self::Output) -> Self {
+        TermResult::None
+    }
+
+    #[inline]
+    fn branch(self) -> ControlFlow<Self::Residual, Self::Output> {
+        match self {
+            TermResult::Some(term) => ControlFlow::Break(term),
+            TermResult::None => ControlFlow::Continue(()),
         }
     }
 }
@@ -348,9 +399,10 @@ impl TermManager {
     }
 
     #[inline]
-    pub fn bv_const(&mut self, c: &[bool]) -> Term {
-        let term = TermType::Const(ConstTerm::BV(BvConst::new(c)));
-        self.new_term(term, Sort::Bv(c.len()))
+    pub fn mk_bv_const(&mut self, c: BvConst) -> Term {
+        let sort = Sort::Bv(c.len());
+        let term = TermType::Const(ConstTerm::BV(c));
+        self.new_term(term, sort)
     }
 
     #[inline]
@@ -386,7 +438,7 @@ impl TermManager {
             bv.push(false);
         }
         bv.truncate(width);
-        self.bv_const(&bv)
+        self.mk_bv_const(BvConst::new(&bv))
     }
 
     #[inline]

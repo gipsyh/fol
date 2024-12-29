@@ -1,5 +1,5 @@
 use super::define::define_core_op;
-use crate::{Sort, Term, TermManager, TermVec};
+use crate::{BvConst, Sort, Term, TermManager, TermResult, TermVec};
 use logic_form::{DagCnf, Lit};
 
 #[inline]
@@ -7,7 +7,21 @@ fn bool_sort(_terms: &[Term]) -> Sort {
     Sort::Bv(1)
 }
 
-define_core_op!(Not, 1, bitblast: not_bitblast, cnf_encode: not_cnf_encode);
+define_core_op!(Not, 1, bitblast: not_bitblast, cnf_encode: not_cnf_encode, simplify: not_simplify);
+fn not_simplify(tm: &mut TermManager, terms: &[Term]) -> TermResult {
+    let x = &terms[0];
+    if let Some(op) = x.op_term() {
+        if op.op == Not {
+            dbg!("not1");
+            return TermResult::Some(op.terms[0].clone());
+        }
+    }
+    if let Some(xc) = x.bv_const() {
+        dbg!("not2");
+        return TermResult::Some(tm.mk_bv_const(!xc));
+    }
+    TermResult::None
+}
 fn not_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     terms[0].iter().map(|t| !t).collect()
 }
@@ -15,7 +29,34 @@ fn not_cnf_encode(_dc: &mut DagCnf, terms: &[Lit]) -> Lit {
     !terms[0]
 }
 
-define_core_op!(And, 2, bitblast: and_bitblast, cnf_encode: and_cnf_encode);
+define_core_op!(And, 2, bitblast: and_bitblast, cnf_encode: and_cnf_encode, simplify: and_simplify);
+fn and_simplify(_tm: &mut TermManager, terms: &[Term]) -> TermResult {
+    let x = &terms[0];
+    let y = &terms[1];
+    let simp = |a: &Term, b: &Term| {
+        if let Some(ac) = a.bv_const() {
+            if ac.is_ones() {
+                dbg!("and1");
+                return TermResult::Some(b.clone());
+            }
+            if ac.is_zero() {
+                dbg!("and2");
+                return TermResult::Some(a.clone());
+            }
+        }
+        if a == b {
+            dbg!("and3");
+            return TermResult::Some(a.clone());
+        }
+        if a == &!b {
+            dbg!("and4");
+            return TermResult::Some(a.mk_bv_const_zero());
+        }
+        TermResult::None
+    };
+    simp(x, y)?;
+    simp(y, x)
+}
 fn and_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     tm.new_op_terms_elementwise(And, &terms[0], &terms[1])
 }
@@ -25,7 +66,34 @@ fn and_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
     l
 }
 
-define_core_op!(Or, 2, bitblast: or_bitblast, cnf_encode: or_cnf_encode);
+define_core_op!(Or, 2, bitblast: or_bitblast, cnf_encode: or_cnf_encode, simplify: or_simplify);
+fn or_simplify(_tm: &mut TermManager, terms: &[Term]) -> TermResult {
+    let x = &terms[0];
+    let y = &terms[1];
+    let simp = |a: &Term, b: &Term| {
+        if let Some(ac) = a.bv_const() {
+            if ac.is_ones() {
+                dbg!("or1");
+                return TermResult::Some(a.clone());
+            }
+            if ac.is_zero() {
+                dbg!("or2");
+                return TermResult::Some(b.clone());
+            }
+        }
+        if a == b {
+            dbg!("or3");
+            return TermResult::Some(a.clone());
+        }
+        if a == &!b {
+            dbg!("or4");
+            return TermResult::Some(a.mk_bv_const_ones());
+        }
+        TermResult::None
+    };
+    simp(x, y)?;
+    simp(y, x)
+}
 fn or_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     tm.new_op_terms_elementwise(Or, &terms[0], &terms[1])
 }
@@ -35,7 +103,34 @@ fn or_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
     l
 }
 
-define_core_op!(Xor, 2, bitblast: xor_bitblast, cnf_encode: xor_cnf_encode);
+define_core_op!(Xor, 2, bitblast: xor_bitblast, cnf_encode: xor_cnf_encode, simplify: xor_simplify);
+fn xor_simplify(_tm: &mut TermManager, terms: &[Term]) -> TermResult {
+    let x = &terms[0];
+    let y = &terms[1];
+    let simp = |a: &Term, b: &Term| {
+        if let Some(ac) = a.bv_const() {
+            if ac.is_ones() {
+                dbg!("xor1");
+                return TermResult::Some(!b.clone());
+            }
+            if ac.is_zero() {
+                dbg!("xor2");
+                return TermResult::Some(b.clone());
+            }
+        }
+        if a == b {
+            dbg!("xor3");
+            return TermResult::Some(a.mk_bv_const_zero());
+        }
+        if a == &!b {
+            dbg!("xor4");
+            return TermResult::Some(a.mk_bv_const_ones());
+        }
+        TermResult::None
+    };
+    simp(x, y)?;
+    simp(y, x)
+}
 fn xor_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     tm.new_op_terms_elementwise(Xor, &terms[0], &terms[1])
 }
@@ -45,7 +140,30 @@ fn xor_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
     l
 }
 
-define_core_op!(Eq, 2, sort: bool_sort, bitblast: eq_bitblast, cnf_encode: eq_cnf_encode);
+define_core_op!(Eq, 2, sort: bool_sort, bitblast: eq_bitblast, cnf_encode: eq_cnf_encode, simplify: eq_simplify);
+fn eq_simplify(tm: &mut TermManager, terms: &[Term]) -> TermResult {
+    let x = &terms[0];
+    let y = &terms[1];
+    let mut simp = |a: &Term, b: &Term| {
+        if a.bv_len() == 1 {
+            if let TermResult::Some(s) = xor_simplify(tm, terms) {
+                dbg!("eq1");
+                return TermResult::Some(!s);
+            }
+        }
+        if a == b {
+            dbg!("eq2");
+            return TermResult::Some(tm.bool_const(true));
+        }
+        if a == &!b {
+            dbg!("eq3");
+            return TermResult::Some(tm.bool_const(false));
+        }
+        TermResult::None
+    };
+    simp(x, y)?;
+    simp(y, x)
+}
 fn eq_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let neqs = tm.new_op_terms_elementwise(Eq, &terms[0], &terms[1]);
     TermVec::from([tm.new_op_terms_fold(And, &neqs)])
@@ -68,7 +186,7 @@ fn ult_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
 define_core_op!(Slt, 2, sort: bool_sort, bitblast: slt_bitblast);
 fn slt_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let x = &terms[0];
-    let y = &terms[0];
+    let y = &terms[1];
     let len = x.len();
     let (xr, xs) = (&x[..len - 1], &x[len - 1]);
     let (yr, ys) = (&y[..len - 1], &y[len - 1]);
@@ -193,9 +311,47 @@ fn sra_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     res
 }
 
-define_core_op!(Ite, 3, sort: ite_sort, bitblast: ite_bitblast, cnf_encode: ite_cnf_encode);
+define_core_op!(Ite, 3, sort: ite_sort, bitblast: ite_bitblast, cnf_encode: ite_cnf_encode, simplify: ite_simplify);
 fn ite_sort(terms: &[Term]) -> Sort {
     terms[1].sort()
+}
+fn ite_simplify(_tm: &mut TermManager, terms: &[Term]) -> TermResult {
+    let (c, t, e) = (&terms[0], &terms[1], &terms[2]);
+    if let Some(cc) = c.bv_const() {
+        dbg!("ite1");
+        if cc.is_ones() {
+            return TermResult::Some(t.clone());
+        } else {
+            return TermResult::Some(e.clone());
+        }
+    }
+    if t == e {
+        dbg!("ite2");
+        return TermResult::Some(t.clone());
+    }
+    if t.bv_len() == 1 {
+        if let Some(ec) = e.bv_const() {
+            if ec.is_zero() {
+                dbg!("ite3");
+                return TermResult::Some(c & t);
+            }
+            if ec.is_ones() {
+                dbg!("ite4");
+                return TermResult::Some(!c | t);
+            }
+        }
+        if let Some(tc) = t.bv_const() {
+            if tc.is_zero() {
+                dbg!("ite5");
+                return TermResult::Some(!c & e);
+            }
+            if tc.is_ones() {
+                dbg!("ite6");
+                return TermResult::Some(c | e);
+            }
+        }
+    }
+    TermResult::None
 }
 fn ite_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let mut res = TermVec::new();
@@ -210,7 +366,17 @@ fn ite_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
     l
 }
 
-define_core_op!(Concat, 2, sort: concat_sort, bitblast: concat_bitblast);
+define_core_op!(Concat, 2, sort: concat_sort, bitblast: concat_bitblast, simplify: concat_simplify);
+fn concat_simplify(tm: &mut TermManager, terms: &[Term]) -> TermResult {
+    let x = &terms[0];
+    let y = &terms[1];
+    if let (Some(xc), Some(yc)) = (x.bv_const(), y.bv_const()) {
+        let mut c = yc.c.clone();
+        c.extend_from_slice(&xc.c);
+        return TermResult::Some(tm.mk_bv_const(BvConst::new(&c)));
+    }
+    TermResult::None
+}
 fn concat_sort(terms: &[Term]) -> Sort {
     Sort::Bv(terms[0].bv_len() + terms[1].bv_len())
 }
