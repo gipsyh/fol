@@ -1,5 +1,3 @@
-use core::range::Range;
-
 use super::define::define_core_op;
 use crate::{BvConst, Sort, Term, TermManager, TermResult, TermVec};
 use logic_form::{DagCnf, Lit};
@@ -483,9 +481,6 @@ fn read_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let array_len = array.len();
     let index_range = 1_usize.checked_shl(index_len as u32).unwrap();
     let element_len = array_len / index_range;
-    dbg!(index_len);
-    dbg!(array_len);
-    dbg!(element_len);
     let ia = |x: usize, y: usize| &array[element_len * x + y];
     let onehot = onehot_encode(tm, &index);
     let mut res = TermVec::new();
@@ -501,14 +496,18 @@ fn read_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
 
 define_core_op!(Write, 3, bitblast: write_bitblast);
 fn write_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
-    // let (array, index) = (&terms[0], &terms[1]);
-    // let index_len = index.len();
-    // let array_len = array.len();
-    // let element_len = array_len / (1 << index_len);
-    // dbg!(index_len);
-    // dbg!(array_len);
-    // dbg!(element_len);
-    // for i in index.iter() {}
-    todo!();
-    todo!()
+    let (array, index, value) = (&terms[0], &terms[1], &terms[2]);
+    let index_len = index.len();
+    let array_len = array.len();
+    let index_range = 1_usize.checked_shl(index_len as u32).unwrap();
+    let element_len = array_len / index_range;
+    let onehot = onehot_encode(tm, &index);
+    let mut res = array.clone();
+    for i in 0..element_len {
+        for j in 0..index_range {
+            let r = &mut res[element_len * j + i];
+            *r = onehot[j].ite(&value[i], r);
+        }
+    }
+    res
 }

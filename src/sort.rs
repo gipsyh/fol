@@ -30,6 +30,11 @@ impl Sort {
             panic!()
         }
     }
+
+    #[inline]
+    pub fn is_array(&self) -> bool {
+        matches!(self, Self::Array(_, _))
+    }
 }
 
 impl Debug for Sort {
