@@ -461,7 +461,7 @@ fn read_sort(terms: &[Term]) -> Sort {
 fn onehot_encode(tm: &mut TermManager, x: &[Term]) -> TermVec {
     let len = 1_usize.checked_shl(x.len() as u32).unwrap();
     let mut res = vec![tm.bool_const(false); len];
-    res[1] = tm.bool_const(true);
+    res[0] = tm.bool_const(true);
     for sb in 0..x.len() {
         let ss = 1 << sb;
         let shift = &x[sb];
@@ -469,7 +469,7 @@ fn onehot_encode(tm: &mut TermManager, x: &[Term]) -> TermVec {
             res[j] = &!shift & &res[j];
         }
         for j in ss..len {
-            res[j] = tm.new_op_term(Ite, [shift, &res[j - ss], &res[j]]);
+            res[j] = shift.ite(&res[j - ss], &res[j]);
         }
     }
     TermVec::from(res.as_slice())
@@ -481,13 +481,12 @@ fn read_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
     let array_len = array.len();
     let index_range = 1_usize.checked_shl(index_len as u32).unwrap();
     let element_len = array_len / index_range;
-    let ia = |x: usize, y: usize| &array[element_len * x + y];
     let onehot = onehot_encode(tm, &index);
     let mut res = TermVec::new();
     for i in 0..element_len {
         let mut r = tm.bool_const(false);
         for j in 0..index_range {
-            r = onehot[j].ite(ia(j, i), &r);
+            r = onehot[j].ite(&array[element_len * j + i], &r);
         }
         res.push(r);
     }
