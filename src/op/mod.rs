@@ -5,10 +5,10 @@ mod other_op;
 use super::term::Term;
 use crate::{Sort, TermManager, TermResult, TermVec};
 pub use core_op::*;
+use giputils::hash::GHashMap;
 use lazy_static::lazy_static;
 use logic_form::{DagCnf, Lit};
 pub use other_op::*;
-use std::collections::HashMap;
 use std::fmt;
 use std::{
     any::{TypeId, type_name},
@@ -126,8 +126,8 @@ struct DynOpCollect(fn() -> DynOp);
 inventory::collect!(DynOpCollect);
 
 lazy_static! {
-    static ref OP_MAP: HashMap<String, DynOp> = {
-        let mut m = HashMap::new();
+    static ref OP_MAP: GHashMap<String, DynOp> = {
+        let mut m = GHashMap::new();
         for op in inventory::iter::<DynOpCollect> {
             let op = op.0();
             m.insert(op.name().to_lowercase(), op);

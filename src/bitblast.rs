@@ -1,6 +1,7 @@
 use crate::{BvConst, Sort, Term, TermManager, TermType, TermVec};
+use giputils::hash::GHashMap;
 use logic_form::{DagCnf, Lit};
-use std::{collections::HashMap, iter::repeat_with, ops::Deref};
+use std::{iter::repeat_with, ops::Deref};
 
 impl BvConst {
     #[inline]
@@ -29,7 +30,7 @@ pub fn var_bitblast(tm: &mut TermManager, sort: Sort) -> TermVec {
 }
 
 impl Term {
-    pub fn bitblast(&self, tm: &mut TermManager, map: &mut HashMap<Term, TermVec>) -> TermVec {
+    pub fn bitblast(&self, tm: &mut TermManager, map: &mut GHashMap<Term, TermVec>) -> TermVec {
         if let Some(res) = map.get(self) {
             return res.clone();
         }
@@ -46,7 +47,7 @@ impl Term {
         map.get(self).unwrap().clone()
     }
 
-    pub fn cnf_encode(&self, dc: &mut DagCnf, map: &mut HashMap<Term, Lit>) -> Lit {
+    pub fn cnf_encode(&self, dc: &mut DagCnf, map: &mut GHashMap<Term, Lit>) -> Lit {
         if let Some(res) = map.get(self) {
             return *res;
         }
@@ -70,7 +71,7 @@ impl Term {
 pub fn bitblast_terms<'a, I: IntoIterator<Item = &'a Term>>(
     terms: I,
     tm: &mut TermManager,
-    map: &mut HashMap<Term, TermVec>,
+    map: &mut GHashMap<Term, TermVec>,
 ) -> impl Iterator<Item = TermVec> {
     terms.into_iter().map(|t| t.bitblast(tm, map))
 }
@@ -78,7 +79,7 @@ pub fn bitblast_terms<'a, I: IntoIterator<Item = &'a Term>>(
 pub fn cnf_encode_terms<'a, I: IntoIterator<Item = &'a Term>>(
     terms: I,
     dc: &mut DagCnf,
-    map: &mut HashMap<Term, Lit>,
+    map: &mut GHashMap<Term, Lit>,
 ) -> impl Iterator<Item = Lit> {
     terms.into_iter().map(|t| t.cnf_encode(dc, map))
 }

@@ -1,6 +1,6 @@
 use super::define::define_core_op;
 use crate::{BvConst, Sort, Term, TermManager, TermResult, TermVec};
-use logic_form::{DagCnf, Lit};
+use logic_form::{DagCnf, Lit, LitVvec};
 
 #[inline]
 fn bool_sort(_terms: &[Term]) -> Sort {
@@ -108,7 +108,7 @@ fn and_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
 }
 fn and_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
     let l = dc.new_var().lit();
-    dc.add_and_rel(l, terms[0], terms[1]);
+    dc.add_rel(l.var(), &LitVvec::cnf_and(l, terms));
     l
 }
 
@@ -185,7 +185,7 @@ fn or_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
 }
 fn or_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
     let l = dc.new_var().lit();
-    dc.add_or_rel(l, terms[0], terms[1]);
+    dc.add_rel(l.var(), &LitVvec::cnf_or(l, terms));
     l
 }
 
@@ -222,7 +222,7 @@ fn xor_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
 }
 fn xor_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
     let l = dc.new_var().lit();
-    dc.add_xor_rel(l, terms[0], terms[1]);
+    dc.add_rel(l.var(), &LitVvec::cnf_xor(l, terms[0], terms[1]));
     l
 }
 
@@ -256,7 +256,7 @@ fn eq_bitblast(tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
 }
 fn eq_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
     let l = dc.new_var().lit();
-    dc.add_xnor_rel(l, terms[0], terms[1]);
+    dc.add_rel(l.var(), &LitVvec::cnf_xnor(l, terms[0], terms[1]));
     l
 }
 
@@ -485,7 +485,7 @@ fn ite_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
 }
 fn ite_cnf_encode(dc: &mut DagCnf, terms: &[Lit]) -> Lit {
     let l = dc.new_var().lit();
-    dc.add_ite_rel(l, terms[0], terms[1], terms[2]);
+    dc.add_rel(l.var(), &LitVvec::cnf_ite(l, terms[0], terms[1], terms[2]));
     l
 }
 
@@ -522,7 +522,7 @@ fn sext_bitblast(_tm: &mut TermManager, terms: &[TermVec]) -> TermVec {
 }
 
 define_core_op!(Slice, 3, sort: slice_sort, bitblast: slice_bitblast, simplify: slice_simplify);
-fn slice_simplify(tm: &mut TermManager, terms: &[Term]) -> TermResult {
+fn slice_simplify(_tm: &mut TermManager, terms: &[Term]) -> TermResult {
     if let Some(op) = terms[0].try_op_term() {
         if op.op == Concat {
             panic!()

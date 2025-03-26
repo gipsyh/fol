@@ -1,8 +1,8 @@
 use crate::{Term, TermManager, TermResult};
-use std::collections::HashMap;
+use giputils::hash::GHashMap;
 
 impl Term {
-    pub fn simplify(&self, tm: &mut TermManager, map: &mut HashMap<Term, Term>) -> Term {
+    pub fn simplify(&self, tm: &mut TermManager, map: &mut GHashMap<Term, Term>) -> Term {
         if let Some(res) = map.get(self) {
             return res.clone();
         }

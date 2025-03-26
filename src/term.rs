@@ -2,7 +2,7 @@ use super::{op::DynOp, sort::Sort};
 use crate::TermVec;
 use crate::op::{Add, And, Ite, Neg, Not, Or, Sub, Xor};
 use giputils::grc::Grc;
-use std::collections::HashMap;
+use giputils::hash::GHashMap;
 use std::fmt::{self, Debug};
 use std::ops::{ControlFlow, DerefMut, FromResidual, Index, Try};
 use std::{hash, ops};
@@ -389,7 +389,7 @@ impl TermGC {
 pub struct TermManagerInner {
     tgc: TermGC,
     num_var: u32,
-    map: HashMap<TermType, Term>,
+    map: GHashMap<TermType, Term>,
 }
 
 #[derive(Clone, Default, PartialEq, Eq)]
