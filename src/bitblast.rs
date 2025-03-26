@@ -1,4 +1,4 @@
-use crate::{BvConst, ConstTerm, Sort, Term, TermManager, TermType, TermVec};
+use crate::{BvConst, Sort, Term, TermManager, TermType, TermVec};
 use logic_form::{DagCnf, Lit};
 use std::{collections::HashMap, iter::repeat_with, ops::Deref};
 
@@ -12,24 +12,6 @@ impl BvConst {
     pub fn cnf_encode(&self) -> Lit {
         debug_assert!(self.len() == 1);
         Lit::constant(self.c[0])
-    }
-}
-
-impl ConstTerm {
-    #[inline]
-    pub fn bitblast(&self, tm: &mut TermManager) -> TermVec {
-        match self {
-            ConstTerm::BV(bv_const) => bv_const.bitblast(tm),
-            ConstTerm::Array(_) => todo!(),
-        }
-    }
-
-    #[inline]
-    pub fn cnf_encode(&self) -> Lit {
-        match self {
-            ConstTerm::BV(bv_const) => bv_const.cnf_encode(),
-            ConstTerm::Array(_) => todo!(),
-        }
     }
 }
 

@@ -4,7 +4,7 @@ use crate::op::{Add, And, Ite, Neg, Not, Or, Sub, Xor};
 use giputils::grc::Grc;
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
-use std::ops::{ControlFlow, DerefMut, FromResidual, Try};
+use std::ops::{ControlFlow, DerefMut, FromResidual, Index, Try};
 use std::{hash, ops};
 use std::{hash::Hash, ops::Deref};
 
@@ -31,9 +31,18 @@ impl Term {
     }
 
     #[inline]
-    pub fn op_term(&self) -> Option<&OpTerm> {
+    pub fn try_op_term(&self) -> Option<&OpTerm> {
         if let TermType::Op(op) = self.deref() {
             Some(op)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    pub fn try_var_term(&self) -> Option<u32> {
+        if let TermType::Var(v) = self.deref() {
+            Some(*v)
         } else {
             None
         }
@@ -45,9 +54,9 @@ impl Term {
     }
 
     #[inline]
-    pub fn bv_const(&self) -> Option<&BvConst> {
+    pub fn try_bv_const(&self) -> Option<&BvConst> {
         match self.deref() {
-            TermType::Const(ConstTerm::BV(c)) => Some(c),
+            TermType::Const(c) => Some(c),
             _ => None,
         }
     }
@@ -127,9 +136,9 @@ impl Debug for Term {
     }
 }
 
-impl PartialEq for Term {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
+impl<T: AsRef<Term>> PartialEq<T> for Term {
+    fn eq(&self, other: &T) -> bool {
+        let other = other.as_ref();
         debug_assert!(self.tm == other.tm);
         self.inner == other.inner
     }
@@ -219,7 +228,11 @@ impl TermInner {
 impl Debug for TermInner {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.ty.fmt(f)
+        match &self.ty {
+            TermType::Const(c) => c.fmt(f),
+            TermType::Var(v) => write!(f, "Var{}, {:?}", *v, self.sort),
+            TermType::Op(o) => o.fmt(f),
+        }
     }
 }
 
@@ -232,9 +245,9 @@ impl Deref for TermInner {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum TermType {
-    Const(ConstTerm),
+    Const(BvConst),
     Var(u32),
     Op(OpTerm),
 }
@@ -277,7 +290,13 @@ impl BvConst {
 impl Debug for BvConst {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("BvConst").field(&self.c).finish()
+        let c: String = self
+            .c
+            .iter()
+            .map(|b| if *b { '1' } else { '0' })
+            .rev()
+            .collect();
+        write!(f, "BvConst({:})", c)
     }
 }
 
@@ -291,18 +310,7 @@ impl ops::Not for &BvConst {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ArrayConst {
-    c: Vec<BvConst>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum ConstTerm {
-    BV(BvConst),
-    Array(ArrayConst),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct OpTerm {
     pub op: DynOp,
     pub terms: Vec<Term>,
@@ -315,6 +323,22 @@ impl OpTerm {
             op: op.into(),
             terms: terms.to_vec(),
         }
+    }
+}
+
+impl Debug for OpTerm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.op.fmt(f)?;
+        self.terms.fmt(f)
+    }
+}
+
+impl Index<usize> for OpTerm {
+    type Output = Term;
+
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.terms[index]
     }
 }
 
@@ -361,7 +385,7 @@ impl TermGC {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct TermManagerInner {
     tgc: TermGC,
     num_var: u32,
@@ -399,21 +423,21 @@ impl TermManager {
 
     #[inline]
     pub fn bool_const(&mut self, c: bool) -> Term {
-        let term = TermType::Const(ConstTerm::BV(BvConst::new(&[c])));
+        let term = TermType::Const(BvConst::new(&[c]));
         self.new_term(term, Sort::Bv(1))
     }
 
     #[inline]
     pub fn bv_const(&mut self, c: BvConst) -> Term {
         let sort = Sort::Bv(c.len());
-        let term = TermType::Const(ConstTerm::BV(c));
+        let term = TermType::Const(c);
         self.new_term(term, sort)
     }
 
     #[inline]
     pub fn bv_const_zero(&mut self, len: usize) -> Term {
         let c = vec![false; len];
-        let term = TermType::Const(ConstTerm::BV(BvConst::new(&c)));
+        let term = TermType::Const(BvConst::new(&c));
         self.new_term(term, Sort::Bv(len))
     }
 
@@ -421,14 +445,14 @@ impl TermManager {
     pub fn bv_const_one(&mut self, len: usize) -> Term {
         let mut c = vec![false; len];
         c[0] = true;
-        let term = TermType::Const(ConstTerm::BV(BvConst::new(&c)));
+        let term = TermType::Const(BvConst::new(&c));
         self.new_term(term, Sort::Bv(len))
     }
 
     #[inline]
     pub fn bv_const_ones(&mut self, len: usize) -> Term {
         let c = vec![true; len];
-        let term = TermType::Const(ConstTerm::BV(BvConst::new(&c)));
+        let term = TermType::Const(BvConst::new(&c));
         self.new_term(term, Sort::Bv(len))
     }
 

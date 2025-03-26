@@ -6,7 +6,7 @@ impl Term {
         if let Some(res) = map.get(self) {
             return res.clone();
         }
-        let simp = if let Some(op_term) = self.op_term() {
+        let simp = if let Some(op_term) = self.try_op_term() {
             let terms: Vec<Term> = op_term.terms.iter().map(|s| s.simplify(tm, map)).collect();
             if let TermResult::Some(new) = op_term.op.simplify(tm, &terms) {
                 new
